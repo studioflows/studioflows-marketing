@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useLocalStorage } from "react-use";
 import { supabase } from "../lib/supabase";
@@ -310,6 +310,8 @@ function CircuitMap({ intensity }) {
 }
 
 export default function Home() {
+  const heroEmailRef = useRef(null);
+  const auditEmailRef = useRef(null);
   const [email, setEmail] = useState("");
   const [audit, setAudit] = useState("");
   const [status, setStatus] = useState("idle");
@@ -323,6 +325,14 @@ export default function Home() {
 
   useEffect(() => {
     setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    const focusTimeout = window.setTimeout(() => {
+      heroEmailRef.current?.focus();
+    }, 120);
+
+    return () => window.clearTimeout(focusTimeout);
   }, []);
 
   useEffect(() => {
@@ -385,7 +395,27 @@ export default function Home() {
     });
   };
 
+  const focusAuditEmail = () => {
+    window.setTimeout(() => {
+      auditEmailRef.current?.focus();
+      const cursorPosition = auditEmailRef.current?.value?.length ?? 0;
+      auditEmailRef.current?.setSelectionRange?.(cursorPosition, cursorPosition);
+    }, 450);
+  };
+
+  const scrollToAuditForm = () => {
+    handleIntent();
+    document.getElementById("audit-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    focusAuditEmail();
+  };
+
+  const handleHeroSubmit = (event) => {
+    event.preventDefault();
+    scrollToAuditForm();
+  };
+
   const handleSubmit = async () => {
+    if (status === "loading") return;
     if (!email || !audit) return;
 
     setStatus("loading");
@@ -482,18 +512,19 @@ export default function Home() {
               Not every system qualifies for execution.
             </p>
 
-            <div className="mx-auto mt-10 max-w-md">
-              <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/30 px-3 py-2">
+            <form onSubmit={handleHeroSubmit} className="mx-auto mt-10 max-w-md">
+              <div className="email-entry-shell flex items-center gap-2 rounded-2xl border border-white/10 bg-black/30 px-3 py-2">
                 <input
+                  ref={heroEmailRef}
+                  autoFocus
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Enter your email"
+                  enterKeyHint="go"
                   className="flex-1 bg-transparent px-2 py-2 text-sm text-white outline-none placeholder:text-white/30"
                 />
                 <button
-                  onClick={() => {
-                    document.getElementById("audit-form")?.scrollIntoView({ behavior: "smooth" });
-                  }}
+                  type="submit"
                   className="rounded-xl bg-gradient-to-r from-emerald-500 to-fuchsia-400 px-4 py-2 text-xs uppercase tracking-[0.2em] text-black"
                 >
                   Start
@@ -503,7 +534,7 @@ export default function Home() {
               <p className="mt-3 text-center text-xs text-white/35">
                 Enter the execution layer
               </p>
-            </div>
+            </form>
 
             <div className="mt-10 flex flex-wrap items-center justify-center gap-3 text-[11px] uppercase tracking-[0.26em] text-white/38">
               <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-2">Decision-Driven</span>
@@ -746,17 +777,27 @@ export default function Home() {
               </div>
 
               <div className="rounded-[24px] border border-emerald-400/14 bg-emerald-400/[0.04] p-5 shadow-[0_0_0_1px_rgba(74,222,128,0.06),0_20px_80px_rgba(0,0,0,0.45)]">
-                <div className="space-y-4">
+                <form
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    handleSubmit();
+                  }}
+                  className="space-y-4"
+                >
                   <div>
                     <label className="mb-2 block text-[10px] uppercase tracking-[0.24em] text-white/35">Email</label>
-                    <input
-                      value={email}
-                      onFocus={handleIntent}
-                      onMouseEnter={handleIntent}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Verify Identity"
-                      className="w-full rounded-2xl border border-white/10 bg-black/25 px-4 py-3.5 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-emerald-400/45"
-                    />
+                    <div className="email-entry-shell rounded-2xl border border-white/10 bg-black/25">
+                      <input
+                        ref={auditEmailRef}
+                        value={email}
+                        onFocus={handleIntent}
+                        onMouseEnter={handleIntent}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="Verify Identity"
+                        enterKeyHint="send"
+                        className="w-full bg-transparent px-4 py-3.5 text-sm text-white outline-none transition placeholder:text-white/25"
+                      />
+                    </div>
                   </div>
 
                   <div>
@@ -765,6 +806,12 @@ export default function Home() {
                       value={audit}
                       onFocus={handleIntent}
                       onChange={(e) => setAudit(e.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" && !event.shiftKey) {
+                          event.preventDefault();
+                          handleSubmit();
+                        }
+                      }}
                       rows={5}
                       placeholder="What is the one operational decision you make every week that you wish was automated?"
                       className="w-full rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-emerald-400/45"
@@ -772,7 +819,7 @@ export default function Home() {
                   </div>
 
                   <button
-                    onClick={handleSubmit}
+                    type="submit"
                     className="w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-fuchsia-400 px-5 py-4 text-sm font-medium uppercase tracking-[0.22em] text-black transition hover:translate-y-[-1px] hover:shadow-[0_0_40px_rgba(74,222,128,0.18)]"
                   >
                     {status === "loading" ? "Initializing..." : "Start"}
@@ -814,7 +861,7 @@ export default function Home() {
                       </>
                     )}
                   </div>
-                </div>
+                </form>
               </div>
             </div>
           </GridCard>
