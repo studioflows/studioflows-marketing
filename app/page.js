@@ -313,7 +313,6 @@ export default function Home() {
   const [email, setEmail] = useState("");
   const [audit, setAudit] = useState("");
   const [status, setStatus] = useState("idle");
-  const [sessionId, setSessionId] = useState(null);
   const [executionMode, setExecutionMode] = useState(false);
   const [intensity, setIntensity] = useState(64);
   const [hydrated, setHydrated] = useState(false);
@@ -386,37 +385,6 @@ export default function Home() {
     });
   };
 
-  const handleHeroStart = async () => {
-    if (!email) {
-      document.getElementById("audit-form")?.scrollIntoView({ behavior: "smooth" });
-      return;
-    }
-
-    if (!supabase) {
-      document.getElementById("audit-form")?.scrollIntoView({ behavior: "smooth" });
-      return;
-    }
-
-    if (!sessionId) {
-      const { data, error } = await supabase
-        .from("vessa_sessions")
-        .insert([
-          {
-            email,
-            status: "initiated",
-          },
-        ])
-        .select()
-        .single();
-
-      if (!error && data?.id) {
-        setSessionId(data.id);
-      }
-    }
-
-    document.getElementById("audit-form")?.scrollIntoView({ behavior: "smooth" });
-  };
-
   const handleSubmit = async () => {
     if (!email || !audit) return;
 
@@ -426,46 +394,26 @@ export default function Home() {
       return;
     }
 
-    let data = null;
-    let error = null;
-
-    if (sessionId) {
-      const response = await supabase
-        .from("vessa_sessions")
-        .update({
+    const { data, error } = await supabase
+      .from("vessa_sessions")
+      .insert([
+        {
           email,
           bottleneck: audit,
           status: "initiated",
-        })
-        .eq("id", sessionId)
-        .select()
-        .single();
+        },
+      ])
+      .select()
+      .single();
 
-      data = response.data;
-      error = response.error;
-    } else {
-      const response = await supabase
-        .from("vessa_sessions")
-        .insert([
-          {
-            email,
-            bottleneck: audit,
-            status: "initiated",
-          },
-        ])
-        .select()
-        .single();
-
-      data = response.data;
-      error = response.error;
-    }
-
-    if (error) {
+    if (error || !data) {
       setStatus("error");
       return;
     }
 
-    window.location.href = `https://vessa.studioflows.co/?session=${data.id}`;
+    setTimeout(() => {
+      window.location.href = `https://vessa.studioflows.co/?session=${data.id}`;
+    }, 200);
   };
 
   return (
@@ -543,7 +491,9 @@ export default function Home() {
                   className="flex-1 bg-transparent px-2 py-2 text-sm text-white outline-none placeholder:text-white/30"
                 />
                 <button
-                  onClick={handleHeroStart}
+                  onClick={() => {
+                    document.getElementById("audit-form")?.scrollIntoView({ behavior: "smooth" });
+                  }}
                   className="rounded-xl bg-gradient-to-r from-emerald-500 to-fuchsia-400 px-4 py-2 text-xs uppercase tracking-[0.2em] text-black"
                 >
                   Start
@@ -825,7 +775,7 @@ export default function Home() {
                     onClick={handleSubmit}
                     className="w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-fuchsia-400 px-5 py-4 text-sm font-medium uppercase tracking-[0.22em] text-black transition hover:translate-y-[-1px] hover:shadow-[0_0_40px_rgba(74,222,128,0.18)]"
                   >
-                    {status === "loading" ? "Simulating Execution" : "Simulate Execution"}
+                    {status === "loading" ? "Initializing..." : "Start"}
                   </button>
 
                   <div className="rounded-2xl border border-white/8 bg-black/30 p-4 font-mono text-[12px] leading-5 text-white/58">
