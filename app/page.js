@@ -77,9 +77,10 @@ function SectionEyebrow({ children }) {
   );
 }
 
-function GridCard({ className = "", children }) {
+function GridCard({ className = "", children, ...props }) {
   return (
     <div
+      {...props}
       className={`rounded-[24px] border border-white/10 bg-white/[0.03] shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_24px_80px_rgba(0,0,0,0.55)] backdrop-blur-xl ${className}`}
     >
       {children}
@@ -388,37 +389,29 @@ export default function Home() {
     if (!email || !audit) return;
 
     setStatus("loading");
-    const candidateNumber = activeFounderNumber || `#${String(Math.floor(Math.random() * 90) + 10).padStart(4, "0")}`;
-
-    let error = null;
-    if (supabase) {
-      const response = await supabase.from("waitlist").insert([
-        {
-          email,
-          audit,
-          slots_seen: slots,
-          founder_number: candidateNumber,
-          source: "studioflows_protocol_access",
-        },
-      ]);
-      error = response.error;
-    } else {
-      error = { message: "supabase_missing" };
+    if (!supabase) {
+      setStatus("error");
+      return;
     }
 
-    window.setTimeout(() => {
-      if (!error) {
-        setFounderNumber(candidateNumber);
-        setStatus("submitted");
-        setEmail("");
-        setAudit("");
-      } else if ((error.message || "").toLowerCase().includes("duplicate")) {
-        setFounderNumber(candidateNumber);
-        setStatus("duplicate");
-      } else {
-        setStatus("error");
-      }
-    }, 1700);
+    const { data, error } = await supabase
+      .from("vessa_sessions")
+      .insert([
+        {
+          email,
+          bottleneck: audit,
+          status: "initiated",
+        },
+      ])
+      .select()
+      .single();
+
+    if (error) {
+      setStatus("error");
+      return;
+    }
+
+    window.location.href = `https://vessa.studioflows.co/?session=${data.id}`;
   };
 
   return (
@@ -434,15 +427,13 @@ export default function Home() {
       <div className="pointer-events-none absolute left-1/2 top-0 h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-emerald-400/10 blur-[140px]" />
 
       <div className="relative z-10 mx-auto w-full max-w-[1200px] px-6 py-8 sm:px-8 lg:px-10">
-        <nav className="flex items-center justify-between gap-4 py-3">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-sm font-semibold tracking-tight shadow-[0_0_30px_rgba(74,222,128,0.08)]">
-              SF
-            </div>
-            <div>
-              <p className="text-sm font-medium tracking-tight text-white/90">StudioFlows</p>
-              <p className="text-[10px] uppercase tracking-[0.28em] text-white/35">Execution Layer</p>
-            </div>
+        <nav className="flex items-center justify-between py-3">
+          <div className="flex items-center">
+            <img
+              src="/StudioFlows logo white (1200 x 675 px).png"
+              alt="StudioFlows"
+              className="h-7 w-auto object-contain opacity-90 drop-shadow-[0_0_16px_rgba(232,121,249,0.25)] transition hover:scale-[1.02] sm:h-8"
+            />
           </div>
 
           <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] py-1.5 px-1.5 md:flex">
@@ -468,7 +459,7 @@ export default function Home() {
         <section className="pb-16 pt-12 lg:pt-16">
           <div className="mx-auto max-w-[980px] text-center">
             <SectionEyebrow>Protocol Access Queue</SectionEyebrow>
-            <h1 className="text-balance text-[3rem] font-semibold leading-[0.88] tracking-[-0.04em] sm:text-[4.6rem] lg:text-[6.5rem]">
+            <h1 className="text-balance text-[2.4rem] font-semibold leading-[0.88] tracking-[-0.04em] sm:text-[3rem] lg:text-[6.5rem]">
               The founder is the operating system.
               <br />
               <span className="text-white/42">Until they’re not.</span>
@@ -488,6 +479,29 @@ export default function Home() {
             <p className="mt-4 font-mono text-xs text-white/35">
               Not every system qualifies for execution.
             </p>
+
+            <div className="mx-auto mt-10 max-w-md">
+              <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/30 px-3 py-2">
+                <input
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email"
+                  className="flex-1 bg-transparent px-2 py-2 text-sm text-white outline-none placeholder:text-white/30"
+                />
+                <button
+                  onClick={() => {
+                    document.getElementById("audit-form")?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                  className="rounded-xl bg-gradient-to-r from-emerald-500 to-fuchsia-400 px-4 py-2 text-xs uppercase tracking-[0.2em] text-black"
+                >
+                  Start
+                </button>
+              </div>
+
+              <p className="mt-3 text-center text-xs text-white/35">
+                Enter the execution layer
+              </p>
+            </div>
 
             <div className="mt-10 flex flex-wrap items-center justify-center gap-3 text-[11px] uppercase tracking-[0.26em] text-white/38">
               <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-2">Decision-Driven</span>
@@ -654,7 +668,7 @@ export default function Home() {
         </section>
 
         <section className="py-14">
-          <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1fr]">
             <GridCard className="p-6 sm:p-7">
               <SectionEyebrow>Execution Loop</SectionEyebrow>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -703,14 +717,14 @@ export default function Home() {
         </section>
 
         <section className="py-14">
-          <GridCard className="overflow-hidden p-6 sm:p-8">
-            <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
+          <GridCard id="audit-form" className="overflow-hidden p-6 sm:p-8">
+            <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
               <div>
                 <SectionEyebrow>Protocol Access</SectionEyebrow>
                 <h2 className="text-3xl font-semibold leading-tight tracking-tight text-white sm:text-5xl">
                   Run your first execution audit.
                 </h2>
-                <p className="mt-5 max-w-[640px] text-base leading-7 text-white/56">
+                <p className="mt-5 max-w-full text-base leading-7 text-white/56 sm:max-w-[640px]">
                   Don’t join a waitlist. Enter the queue with a real operational bottleneck. We want the decision that still depends on you every week and should not.
                 </p>
 
@@ -757,7 +771,7 @@ export default function Home() {
 
                   <button
                     onClick={handleSubmit}
-                    className="w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-fuchsia-400 px-5 py-3.5 text-sm font-medium uppercase tracking-[0.22em] text-black transition hover:translate-y-[-1px] hover:shadow-[0_0_40px_rgba(74,222,128,0.18)]"
+                    className="w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-fuchsia-400 px-5 py-4 text-sm font-medium uppercase tracking-[0.22em] text-black transition hover:translate-y-[-1px] hover:shadow-[0_0_40px_rgba(74,222,128,0.18)]"
                   >
                     {status === "loading" ? "Simulating Execution" : "Simulate Execution"}
                   </button>
