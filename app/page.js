@@ -313,6 +313,7 @@ export default function Home() {
   const [email, setEmail] = useState("");
   const [audit, setAudit] = useState("");
   const [status, setStatus] = useState("idle");
+  const [sessionId, setSessionId] = useState(null);
   const [executionMode, setExecutionMode] = useState(false);
   const [intensity, setIntensity] = useState(64);
   const [hydrated, setHydrated] = useState(false);
@@ -385,6 +386,37 @@ export default function Home() {
     });
   };
 
+  const handleHeroStart = async () => {
+    if (!email) {
+      document.getElementById("audit-form")?.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+
+    if (!supabase) {
+      document.getElementById("audit-form")?.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+
+    if (!sessionId) {
+      const { data, error } = await supabase
+        .from("vessa_sessions")
+        .insert([
+          {
+            email,
+            status: "initiated",
+          },
+        ])
+        .select()
+        .single();
+
+      if (!error && data?.id) {
+        setSessionId(data.id);
+      }
+    }
+
+    document.getElementById("audit-form")?.scrollIntoView({ behavior: "smooth" });
+  };
+
   const handleSubmit = async () => {
     if (!email || !audit) return;
 
@@ -394,17 +426,39 @@ export default function Home() {
       return;
     }
 
-    const { data, error } = await supabase
-      .from("vessa_sessions")
-      .insert([
-        {
+    let data = null;
+    let error = null;
+
+    if (sessionId) {
+      const response = await supabase
+        .from("vessa_sessions")
+        .update({
           email,
           bottleneck: audit,
           status: "initiated",
-        },
-      ])
-      .select()
-      .single();
+        })
+        .eq("id", sessionId)
+        .select()
+        .single();
+
+      data = response.data;
+      error = response.error;
+    } else {
+      const response = await supabase
+        .from("vessa_sessions")
+        .insert([
+          {
+            email,
+            bottleneck: audit,
+            status: "initiated",
+          },
+        ])
+        .select()
+        .single();
+
+      data = response.data;
+      error = response.error;
+    }
 
     if (error) {
       setStatus("error");
@@ -427,12 +481,12 @@ export default function Home() {
       <div className="pointer-events-none absolute left-1/2 top-0 h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-emerald-400/10 blur-[140px]" />
 
       <div className="relative z-10 mx-auto w-full max-w-[1200px] px-6 py-8 sm:px-8 lg:px-10">
-        <nav className="flex items-center justify-between py-3">
+        <nav className="flex items-center justify-between py-4 sm:py-5">
           <div className="flex items-center">
             <img
               src="/StudioFlows logo white (1200 x 675 px).png"
               alt="StudioFlows"
-              className="h-7 w-auto object-contain opacity-90 drop-shadow-[0_0_16px_rgba(232,121,249,0.25)] transition hover:scale-[1.02] sm:h-8"
+              className="h-12 w-auto object-contain opacity-90 drop-shadow-[0_0_14px_rgba(232,121,249,0.22)] sm:h-14"
             />
           </div>
 
@@ -489,9 +543,7 @@ export default function Home() {
                   className="flex-1 bg-transparent px-2 py-2 text-sm text-white outline-none placeholder:text-white/30"
                 />
                 <button
-                  onClick={() => {
-                    document.getElementById("audit-form")?.scrollIntoView({ behavior: "smooth" });
-                  }}
+                  onClick={handleHeroStart}
                   className="rounded-xl bg-gradient-to-r from-emerald-500 to-fuchsia-400 px-4 py-2 text-xs uppercase tracking-[0.2em] text-black"
                 >
                   Start
