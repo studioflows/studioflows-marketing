@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useLocalStorage } from "react-use";
 import { supabase } from "../lib/supabase";
@@ -310,6 +310,7 @@ function CircuitMap({ intensity }) {
 }
 
 export default function Home() {
+  const auditCardRef = useRef(null);
   const [email, setEmail] = useState("");
   const [audit, setAudit] = useState("");
   const [status, setStatus] = useState("idle");
@@ -383,6 +384,11 @@ export default function Home() {
       if (typeof prev !== "number") return 41;
       return prev > 5 ? prev - 1 : prev;
     });
+  };
+
+  const scrollToAuditForm = () => {
+    const target = window.innerWidth < 1024 ? auditCardRef.current : document.getElementById("audit-form");
+    target?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const handleSubmit = async () => {
@@ -461,7 +467,7 @@ export default function Home() {
         <section className="pb-16 pt-12 lg:pt-16">
           <div className="mx-auto max-w-[980px] text-center">
             <SectionEyebrow>Protocol Access Queue</SectionEyebrow>
-            <h1 className="text-balance text-[2.4rem] font-semibold leading-[0.9] tracking-[-0.04em] sm:text-[3rem] lg:text-[6.5rem]">
+            <h1 className="text-balance text-[2.4rem] font-semibold leading-[0.92] tracking-[-0.04em] sm:text-[3rem] lg:text-[6.5rem]">
               The founder is the operating system.
               <br />
               <span className="text-white/42">Until they’re not.</span>
@@ -491,9 +497,7 @@ export default function Home() {
                   className="flex-1 bg-transparent px-2 py-2 text-sm text-white outline-none placeholder:text-white/30"
                 />
                 <button
-                  onClick={() => {
-                    document.getElementById("audit-form")?.scrollIntoView({ behavior: "smooth" });
-                  }}
+                  onClick={scrollToAuditForm}
                   className="rounded-xl bg-gradient-to-r from-emerald-500 to-fuchsia-400 px-4 py-2 text-xs uppercase tracking-[0.2em] text-black"
                 >
                   Start
@@ -745,7 +749,10 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="rounded-[24px] border border-emerald-400/14 bg-emerald-400/[0.04] p-5 shadow-[0_0_0_1px_rgba(74,222,128,0.06),0_20px_80px_rgba(0,0,0,0.45)]">
+              <div
+                ref={auditCardRef}
+                className="rounded-[24px] border border-emerald-400/14 bg-emerald-400/[0.04] p-5 shadow-[0_0_0_1px_rgba(74,222,128,0.06),0_20px_80px_rgba(0,0,0,0.45)]"
+              >
                 <div className="space-y-4">
                   <div>
                     <label className="mb-2 block text-[10px] uppercase tracking-[0.24em] text-white/35">Email</label>
