@@ -491,7 +491,7 @@ export default function Home() {
         <section className="pb-16 pt-12 lg:pt-16">
           <div className="mx-auto max-w-[980px] text-center">
             <SectionEyebrow>Protocol Access Queue</SectionEyebrow>
-            <h1 className="text-balance text-[2.4rem] font-semibold leading-[0.88] tracking-[-0.04em] sm:text-[3rem] lg:text-[6.5rem]">
+            <h1 className="text-balance text-[2.4rem] font-semibold leading-[0.9] tracking-[-0.04em] sm:text-[3rem] lg:text-[6.5rem]">
               The founder is the operating system.
               <br />
               <span className="text-white/42">Until they’re not.</span>
