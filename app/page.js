@@ -184,7 +184,7 @@ function ExecutionPanel({ logs }) {
                     Stop looking at data. Start deploying it.
                   </p>
                 </div>
-                <div className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-[10px] uppercase tracking-[0.22em] text-emerald-300">
+                <div className="rounded-full border border-emerald-400/20 bg-gradient-to-r from-emerald-400/10 to-fuchsia-400/10 px-3 py-1 text-[10px] uppercase tracking-[0.22em] text-white">
                   Live
                 </div>
               </div>
@@ -198,7 +198,7 @@ function ExecutionPanel({ logs }) {
                     transition={{ duration: 0.25, delay: i * 0.05 }}
                     className="flex gap-3"
                   >
-                    <span className="text-emerald-400">&gt;</span>
+                    <span className={i === logs.length - 1 ? "text-fuchsia-300" : "text-emerald-400"}>&gt;</span>
                     <span>{log}</span>
                   </motion.div>
                 ))}
@@ -256,7 +256,7 @@ function CircuitMap({ intensity }) {
       <motion.div
         animate={{ scale: [1, 1.045, 1], opacity: [0.75, 1, 0.75] }}
         transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute left-1/2 top-1/2 h-28 w-28 -translate-x-1/2 -translate-y-1/2 rounded-full border border-emerald-300/30 bg-emerald-400/[0.08] shadow-[0_0_140px_rgba(74,222,128,0.45)]"
+        className="absolute left-1/2 top-1/2 h-28 w-28 -translate-x-1/2 -translate-y-1/2 rounded-full border border-emerald-300/30 bg-emerald-400/[0.08] shadow-[0_0_120px_rgba(74,222,128,0.35),0_0_80px_rgba(232,121,249,0.25)]"
       >
         <div className="absolute inset-3 rounded-full border border-white/10 bg-black/50" />
         <div className="absolute inset-[26px] rounded-full bg-gradient-to-br from-emerald-300/80 via-emerald-200/20 to-transparent blur-[1px]" />
@@ -428,7 +428,7 @@ export default function Home() {
       <div
         className="pointer-events-none absolute inset-0 opacity-90"
         style={{
-          background: `radial-gradient(circle at ${mouseGlow.x}% ${mouseGlow.y}%, rgba(74,222,128,0.10), transparent 18%), radial-gradient(circle at 50% 12%, rgba(255,255,255,0.08), transparent 18%), radial-gradient(circle at 50% 40%, rgba(16,185,129,0.09), transparent 30%), linear-gradient(180deg, rgba(255,255,255,0.02), transparent 30%)`,
+          background: `radial-gradient(circle at ${mouseGlow.x}% ${mouseGlow.y}%, rgba(232,121,249,0.06), transparent 18%), radial-gradient(circle at 50% 12%, rgba(255,255,255,0.08), transparent 18%), radial-gradient(circle at 50% 40%, rgba(16,185,129,0.09), transparent 30%), linear-gradient(180deg, rgba(255,255,255,0.02), transparent 30%)`,
         }}
       />
       <div className="pointer-events-none absolute left-1/2 top-0 h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-emerald-400/10 blur-[140px]" />
@@ -492,7 +492,7 @@ export default function Home() {
             <div className="mt-10 flex flex-wrap items-center justify-center gap-3 text-[11px] uppercase tracking-[0.26em] text-white/38">
               <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-2">Decision-Driven</span>
               <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-2">Approval-Based</span>
-              <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-2 text-white">Cross-System Control</span>
+              <span className="rounded-full border border-emerald-400/30 bg-gradient-to-r from-emerald-400/10 via-fuchsia-400/10 to-transparent px-3 py-2 text-white">Cross-System Control</span>
             </div>
           </div>
 
@@ -558,7 +558,7 @@ export default function Home() {
                     onClick={() => setExecutionMode((v) => !v)}
                     className={`rounded-full border px-4 py-2 text-[11px] uppercase tracking-[0.24em] transition ${
                       executionMode
-                        ? "border-emerald-400/30 bg-emerald-400 text-black"
+                        ? "border-emerald-400/30 bg-gradient-to-r from-emerald-400 to-fuchsia-400 text-black"
                         : "border-white/10 bg-white/[0.03] text-white/58"
                     }`}
                   >
@@ -640,7 +640,7 @@ export default function Home() {
                     max="100"
                     value={intensity}
                     onChange={(e) => setIntensity(Number(e.target.value))}
-                    className="w-full accent-emerald-400 h-[3px]"
+                    className="h-[3px] w-full accent-fuchsia-400"
                   />
                   <p className="mt-3 text-sm text-white/45">
                     Slide from visibility to autonomy. Watch isolated nodes become one operating system.
@@ -757,7 +757,7 @@ export default function Home() {
 
                   <button
                     onClick={handleSubmit}
-                    className="w-full rounded-2xl bg-emerald-500 px-5 py-3.5 text-sm font-medium uppercase tracking-[0.22em] text-black transition hover:translate-y-[-1px] hover:shadow-[0_0_40px_rgba(74,222,128,0.18)]"
+                    className="w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-fuchsia-400 px-5 py-3.5 text-sm font-medium uppercase tracking-[0.22em] text-black transition hover:translate-y-[-1px] hover:shadow-[0_0_40px_rgba(74,222,128,0.18)]"
                   >
                     {status === "loading" ? "Simulating Execution" : "Simulate Execution"}
                   </button>
@@ -809,7 +809,7 @@ export default function Home() {
           <h2 className="mt-4 text-4xl font-semibold leading-tight tracking-tight text-white sm:text-6xl">
             The business runs through StudioFlows.
           </h2>
-          <p className="mx-auto mt-5 max-w-[720px] text-balance text-base leading-7 text-white/50 sm:text-lg">
+          <p className="mx-auto mt-5 max-w-[720px] border-l border-fuchsia-400/20 pl-4 text-balance text-base leading-7 text-white/60 sm:text-lg">
             You stop checking five systems. You stop being the routing layer. What should happen, does.
           </p>
         </section>
