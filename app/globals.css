@@ -1,0 +1,219 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* -------------------- */
+/* DESIGN TOKENS */
+/* -------------------- */
+
+:root {
+  --bg-primary: #0b0b0c;
+  --bg-secondary: #111113;
+
+  --text-primary: #e7e5e4;
+  --text-muted: #a1a1aa;
+
+  --accent: #d6d3d1;
+  --accent-electric: #22d3ee;
+}
+
+/* -------------------- */
+/* BASE RESET */
+/* -------------------- */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255,255,255,0.04), transparent 40%),
+    radial-gradient(circle at 80% 20%, rgba(255,255,255,0.03), transparent 40%),
+    var(--bg-primary);
+
+  color: var(--text-primary);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-feature-settings: "rlig" 1, "calt" 1;
+  -webkit-font-smoothing: antialiased;
+
+  margin: 0;
+}
+
+/* -------------------- */
+/* TYPOGRAPHY */
+/* -------------------- */
+
+h1, h2, h3 {
+  color: var(--text-primary);
+  font-family: "Playfair Display", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  letter-spacing: -0.02em;
+  font-weight: 500;
+}
+
+p {
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+/* -------------------- */
+/* LAYOUT */
+/* -------------------- */
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+}
+
+/* -------------------- */
+/* CARD SYSTEM */
+/* -------------------- */
+
+.card {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05);
+
+  border-radius: 1.25rem;
+  padding: 1.5rem;
+
+  backdrop-filter: blur(10px);
+  transition: all 0.25s ease;
+}
+
+.card:hover {
+  border-color: rgba(255,255,255,0.1);
+}
+
+/* -------------------- */
+/* INPUT */
+/* -------------------- */
+
+input {
+  width: 100%;
+
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.08);
+
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+
+  color: var(--text-primary);
+}
+
+input::placeholder {
+  color: var(--text-muted);
+}
+
+/* -------------------- */
+/* BUTTON */
+/* -------------------- */
+
+button {
+  background: var(--accent);
+  color: #0b0b0c;
+
+  border-radius: 0.75rem;
+  padding: 0.75rem 1.25rem;
+
+  font-weight: 500;
+
+  transition: opacity 0.2s ease;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+/* -------------------- */
+/* NOISE OVERLAY */
+/* -------------------- */
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+
+  background-image: url("https://grainy-gradients.vercel.app/noise.svg");
+  opacity: 0.03;
+}
+
+/* -------------------- */
+/* BACKGROUND PULSE */
+/* -------------------- */
+
+.bg-pulse {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+
+  background: radial-gradient(
+    circle at 30% 30%,
+    rgba(255, 255, 255, 0.06),
+    transparent 50%
+  );
+
+  animation: pulseBreath 12s ease-in-out infinite;
+  opacity: 0.4;
+  will-change: transform, opacity;
+}
+
+@keyframes pulseBreath {
+  0% {
+    transform: scale(1);
+    opacity: 0.35;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.35;
+  }
+}
+
+.bg-pulse-secondary {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+
+  background: radial-gradient(
+    circle at 70% 20%,
+    rgba(255, 255, 255, 0.04),
+    transparent 50%
+  );
+
+  animation: pulseBreathAlt 16s ease-in-out infinite;
+  opacity: 0.3;
+  will-change: transform, opacity;
+}
+
+@keyframes pulseBreathAlt {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media (max-width: 639px) {
+  .bg-pulse {
+    opacity: 0.22;
+  }
+
+  .bg-pulse-secondary {
+    opacity: 0.16;
+  }
+}
