@@ -414,6 +414,19 @@ export default function Home() {
     scrollToAuditForm();
   };
 
+  const handleHeroButtonClick = () => {
+    scrollToAuditForm();
+  };
+
+  const handleAuditFormSubmit = (event) => {
+    event.preventDefault();
+    handleSubmit();
+  };
+
+  const handleAuditButtonClick = () => {
+    handleSubmit();
+  };
+
   const handleSubmit = async () => {
     if (status === "loading") return;
     if (!email || !audit) return;
@@ -524,7 +537,8 @@ export default function Home() {
                   className="flex-1 bg-transparent px-2 py-2 text-sm text-white outline-none placeholder:text-white/30"
                 />
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={handleHeroButtonClick}
                   className="rounded-xl bg-gradient-to-r from-emerald-500 to-fuchsia-400 px-4 py-2 text-xs uppercase tracking-[0.2em] text-black"
                 >
                   Start
@@ -778,10 +792,7 @@ export default function Home() {
 
               <div className="rounded-[24px] border border-emerald-400/14 bg-emerald-400/[0.04] p-5 shadow-[0_0_0_1px_rgba(74,222,128,0.06),0_20px_80px_rgba(0,0,0,0.45)]">
                 <form
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    handleSubmit();
-                  }}
+                  onSubmit={handleAuditFormSubmit}
                   className="space-y-4"
                 >
                   <div>
@@ -819,7 +830,8 @@ export default function Home() {
                   </div>
 
                   <button
-                    type="submit"
+                    type="button"
+                    onClick={handleAuditButtonClick}
                     className="w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-fuchsia-400 px-5 py-4 text-sm font-medium uppercase tracking-[0.22em] text-black transition hover:translate-y-[-1px] hover:shadow-[0_0_40px_rgba(74,222,128,0.18)]"
                   >
                     {status === "loading" ? "Initializing..." : "Start"}
