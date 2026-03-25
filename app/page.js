@@ -311,6 +311,9 @@ function CircuitMap({ intensity }) {
 
 export default function Home() {
   const auditCardRef = useRef(null);
+  const heroEmailRef = useRef(null);
+  const auditEmailRef = useRef(null);
+  const auditTextareaRef = useRef(null);
   const [email, setEmail] = useState("");
   const [audit, setAudit] = useState("");
   const [status, setStatus] = useState("idle");
@@ -324,6 +327,10 @@ export default function Home() {
 
   useEffect(() => {
     setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    heroEmailRef.current?.focus();
   }, []);
 
   useEffect(() => {
@@ -389,6 +396,23 @@ export default function Home() {
   const scrollToAuditForm = () => {
     const target = window.innerWidth < 1024 ? auditCardRef.current : document.getElementById("audit-form");
     target?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const focusAuditQuestion = () => {
+    window.setTimeout(() => {
+      auditTextareaRef.current?.focus();
+    }, 250);
+  };
+
+  const handleHeroSubmit = (event) => {
+    event.preventDefault();
+    if (!email.trim()) {
+      heroEmailRef.current?.focus();
+      return;
+    }
+
+    scrollToAuditForm();
+    focusAuditQuestion();
   };
 
   const handleSubmit = async () => {
@@ -489,20 +513,25 @@ export default function Home() {
             </p>
 
             <div className="mx-auto mt-10 max-w-md">
-              <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/30 px-3 py-2">
+              <form
+                onSubmit={handleHeroSubmit}
+                className="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/30 px-3 py-2"
+              >
                 <input
+                  ref={heroEmailRef}
+                  autoFocus
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Enter your email"
                   className="flex-1 bg-transparent px-2 py-2 text-sm text-white outline-none placeholder:text-white/30"
                 />
                 <button
-                  onClick={scrollToAuditForm}
+                  type="submit"
                   className="rounded-xl bg-gradient-to-r from-emerald-500 to-fuchsia-400 px-4 py-2 text-xs uppercase tracking-[0.2em] text-black"
                 >
                   Start
                 </button>
-              </div>
+              </form>
 
               <p className="mt-3 text-center text-xs text-white/35">
                 Enter the execution layer
@@ -753,10 +782,17 @@ export default function Home() {
                 ref={auditCardRef}
                 className="rounded-[24px] border border-emerald-400/14 bg-emerald-400/[0.04] p-5 shadow-[0_0_0_1px_rgba(74,222,128,0.06),0_20px_80px_rgba(0,0,0,0.45)]"
               >
-                <div className="space-y-4">
+                <form
+                  className="space-y-4"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    handleSubmit();
+                  }}
+                >
                   <div>
                     <label className="mb-2 block text-[10px] uppercase tracking-[0.24em] text-white/35">Email</label>
                     <input
+                      ref={auditEmailRef}
                       value={email}
                       onFocus={handleIntent}
                       onMouseEnter={handleIntent}
@@ -769,9 +805,16 @@ export default function Home() {
                   <div>
                     <label className="mb-2 block text-[10px] uppercase tracking-[0.24em] text-white/35">Founder Audit</label>
                     <textarea
+                      ref={auditTextareaRef}
                       value={audit}
                       onFocus={handleIntent}
                       onChange={(e) => setAudit(e.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" && !event.shiftKey) {
+                          event.preventDefault();
+                          handleSubmit();
+                        }
+                      }}
                       rows={5}
                       placeholder="What is the one operational decision you make every week that you wish was automated?"
                       className="w-full rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-emerald-400/45"
@@ -779,7 +822,7 @@ export default function Home() {
                   </div>
 
                   <button
-                    onClick={handleSubmit}
+                    type="submit"
                     className="w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-fuchsia-400 px-5 py-4 text-sm font-medium uppercase tracking-[0.22em] text-black transition hover:translate-y-[-1px] hover:shadow-[0_0_40px_rgba(74,222,128,0.18)]"
                   >
                     {status === "loading" ? "Initializing..." : "Start"}
@@ -821,7 +864,7 @@ export default function Home() {
                       </>
                     )}
                   </div>
-                </div>
+                </form>
               </div>
             </div>
           </GridCard>
