@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import Link from "next/link";
 import { useLocalStorage } from "react-use";
 import { supabase } from "../lib/supabase";
 
@@ -878,6 +879,20 @@ export default function Home() {
           <p className="mx-auto mt-5 max-w-[720px] border-l border-fuchsia-400/20 pl-4 text-balance text-base leading-7 text-white/60 sm:text-lg">
             You stop checking five systems. You stop being the routing layer. What should happen, does.
           </p>
+          <div className="mt-8 flex items-center justify-center gap-6">
+            <Link
+              href="/privacy-policy"
+              className="text-[11px] uppercase tracking-[0.24em] text-white/45 transition hover:text-white"
+            >
+              Privacy Policy
+            </Link>
+            <Link
+              href="/terms-of-service"
+              className="text-[11px] uppercase tracking-[0.24em] text-white/45 transition hover:text-white"
+            >
+              Terms of Service
+            </Link>
+          </div>
         </section>
       </div>
     </main>
