@@ -417,7 +417,10 @@ export default function Home() {
   };
 
   const handleSubmit = async () => {
-    if (!email || !audit) return;
+    const normalizedEmail = email.trim();
+    const normalizedAudit = audit.trim();
+
+    if (!normalizedEmail || !normalizedAudit) return;
 
     setStatus("loading");
     if (!supabase) {
@@ -429,8 +432,8 @@ export default function Home() {
       .from("vessa_sessions")
       .insert([
         {
-          email,
-          bottleneck: audit,
+          email: normalizedEmail,
+          bottleneck: normalizedAudit,
           status: "initiated",
         },
       ])
@@ -443,7 +446,12 @@ export default function Home() {
     }
 
     setTimeout(() => {
-      window.location.href = `https://vessa.studioflows.co/?session=${data.id}`;
+      const params = new URLSearchParams({
+        session: String(data.id),
+        email: normalizedEmail,
+      });
+
+      window.location.href = `https://vessa.studioflows.co/?${params.toString()}`;
     }, 200);
   };
 
