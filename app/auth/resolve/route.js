@@ -2,9 +2,12 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { getProductDestination, sanitizeProductKey, validateRelativeNext, validateReturnTo } from "../../../lib/auth/config";
 import {
+  AUTH_COOKIE_ACCESS,
+  AUTH_COOKIE_REFRESH,
   getActiveEntitlements,
   getAuthenticatedUserFromCookies,
   provisionStarterEntitlementStub,
+  refreshSessionFromRefreshToken,
   resolveAuthDestination,
 } from "../../../lib/auth/server";
 
@@ -27,13 +30,20 @@ export async function GET(request) {
   const returnTo = validateReturnTo(requestUrl.searchParams.get("return_to"));
   const next = validateRelativeNext(requestUrl.searchParams.get("next"));
 
-  const user = await getAuthenticatedUserFromCookies(cookies());
+  const cookieStore = cookies();
+  let user = await getAuthenticatedUserFromCookies(cookieStore);
+  let refreshedSession = null;
+
   if (!user) {
-    const loginUrl = new URL("/login", requestUrl.origin);
-    if (product) loginUrl.searchParams.set("product", product);
-    if (returnTo) loginUrl.searchParams.set("return_to", returnTo);
-    if (next) loginUrl.searchParams.set("next", next);
-    return NextResponse.redirect(loginUrl);
+    const refreshToken = cookieStore.get(AUTH_COOKIE_REFRESH)?.value;
+    refreshedSession = await refreshSessionFromRefreshToken(refreshToken);
+    if (refreshedSession?.user) {
+      user = refreshedSession.user;
+    }
+  }
+
+  if (!user) {
+    return NextResponse.redirect(new URL("/apps?state=no-access", requestUrl.origin));
   }
 
   const entitlements = await getActiveEntitlements(user.id);
@@ -55,8 +65,42 @@ export async function GET(request) {
   if (resolution.type === "provision-required") {
     const provisioned = await provisionStarterEntitlementStub(user.id, product);
     const fallback = getProductDestination(product);
-    return externalRedirectOrInternal(provisioned?.destination || fallback, requestUrl);
+    const response = externalRedirectOrInternal(provisioned?.destination || fallback, requestUrl);
+    if (refreshedSession?.session) {
+      response.cookies.set(AUTH_COOKIE_ACCESS, refreshedSession.session.access_token, {
+        httpOnly: true,
+        secure: requestUrl.protocol === "https:",
+        sameSite: "lax",
+        path: "/",
+        maxAge: refreshedSession.session.expires_in || 3600,
+      });
+      response.cookies.set(AUTH_COOKIE_REFRESH, refreshedSession.session.refresh_token, {
+        httpOnly: true,
+        secure: requestUrl.protocol === "https:",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 60 * 60 * 24 * 30,
+      });
+    }
+    return response;
   }
 
-  return externalRedirectOrInternal(resolution.destination, requestUrl);
+  const response = externalRedirectOrInternal(resolution.destination, requestUrl);
+  if (refreshedSession?.session) {
+    response.cookies.set(AUTH_COOKIE_ACCESS, refreshedSession.session.access_token, {
+      httpOnly: true,
+      secure: requestUrl.protocol === "https:",
+      sameSite: "lax",
+      path: "/",
+      maxAge: refreshedSession.session.expires_in || 3600,
+    });
+    response.cookies.set(AUTH_COOKIE_REFRESH, refreshedSession.session.refresh_token, {
+      httpOnly: true,
+      secure: requestUrl.protocol === "https:",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30,
+    });
+  }
+  return response;
 }

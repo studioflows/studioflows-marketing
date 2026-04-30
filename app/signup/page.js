@@ -3,14 +3,48 @@
 import { useState } from "react";
 import Link from "next/link";
 import { supabase } from "../../lib/supabase";
-import { sanitizeProductKey, validateRelativeNext, validateReturnTo } from "../../lib/auth/config";
+import { authContextToQuery, buildAuthContextFromSearchParams } from "../../lib/auth/config";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [status, setStatus] = useState("idle");
   const [message, setMessage] = useState("");
 
-  async function handleSubmit(event) {
+  const context =
+    typeof window === "undefined"
+      ? { intent: "signup" }
+      : buildAuthContextFromSearchParams(new URLSearchParams(window.location.search));
+
+  const loginQuery = authContextToQuery({ ...context, intent: "login" });
+  const loginHref = loginQuery ? `/login?${loginQuery}` : "/login";
+
+  async function syncServerSession(session) {
+    await fetch("/auth/session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        access_token: session.access_token,
+        refresh_token: session.refresh_token,
+        expires_in: session.expires_in,
+      }),
+    });
+  }
+
+  function routeToResolver(contextValue) {
+    const query = authContextToQuery({ ...contextValue, intent: "signup" });
+    window.location.href = query ? `/auth/resolve?${query}` : "/auth/resolve";
+  }
+
+  function buildCallbackUrl(contextValue) {
+    const callbackUrl = new URL("/auth/callback", window.location.origin);
+    const query = authContextToQuery({ ...contextValue, intent: "signup" });
+    const params = new URLSearchParams(query);
+    for (const [key, value] of params.entries()) callbackUrl.searchParams.set(key, value);
+    return callbackUrl;
+  }
+
+  async function handleEmailSignup(event) {
     event.preventDefault();
     setStatus("idle");
     setMessage("");
@@ -20,6 +54,45 @@ export default function SignupPage() {
       setMessage("Email is required.");
       return;
     }
+    if (!password.trim()) {
+      setStatus("error");
+      setMessage("Password is required.");
+      return;
+    }
+    if (!supabase) {
+      setStatus("error");
+      setMessage("Auth is unavailable. Missing Supabase environment variables.");
+      return;
+    }
+
+    const callbackUrl = buildCallbackUrl(context);
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim().toLowerCase(),
+      password,
+      options: {
+        emailRedirectTo: callbackUrl.toString(),
+      },
+    });
+
+    if (error) {
+      setStatus("error");
+      setMessage(error.message || "Unable to create account.");
+      return;
+    }
+
+    if (data?.session) {
+      await syncServerSession(data.session);
+      routeToResolver(context);
+      return;
+    }
+
+    setStatus("success");
+    setMessage("Check your email to confirm signup and continue.");
+  }
+
+  async function handleGoogleSignup() {
+    setStatus("idle");
+    setMessage("");
 
     if (!supabase) {
       setStatus("error");
@@ -27,18 +100,39 @@ export default function SignupPage() {
       return;
     }
 
-    const urlSearchParams = new URLSearchParams(window.location.search);
-    const context = {
-      product: sanitizeProductKey(urlSearchParams.get("product")),
-      returnTo: validateReturnTo(urlSearchParams.get("return_to")),
-      next: validateRelativeNext(urlSearchParams.get("next")),
-    };
+    const callbackUrl = buildCallbackUrl(context);
 
-    const callbackUrl = new URL("/auth/callback", window.location.origin);
-    callbackUrl.searchParams.set("intent", "signup");
-    if (context.product) callbackUrl.searchParams.set("product", context.product);
-    if (context.returnTo) callbackUrl.searchParams.set("return_to", context.returnTo);
-    if (context.next) callbackUrl.searchParams.set("next", context.next);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: callbackUrl.toString(),
+        queryParams: { prompt: "select_account" },
+      },
+    });
+
+    if (error) {
+      setStatus("error");
+      setMessage(error.message || "Unable to start Google signup.");
+    }
+  }
+
+  async function handleMagicLink(event) {
+    event.preventDefault();
+    setStatus("idle");
+    setMessage("");
+
+    if (!email.trim()) {
+      setStatus("error");
+      setMessage("Email is required.");
+      return;
+    }
+    if (!supabase) {
+      setStatus("error");
+      setMessage("Auth is unavailable. Missing Supabase environment variables.");
+      return;
+    }
+
+    const callbackUrl = buildCallbackUrl(context);
 
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim().toLowerCase(),
@@ -68,49 +162,85 @@ export default function SignupPage() {
             alt="StudioFlows"
             className="h-12 w-auto object-contain opacity-90 sm:h-14"
           />
-          <Link href="/login" className="text-[11px] uppercase tracking-[0.2em] text-white/70 hover:text-white">
+          <Link href={loginHref} className="text-[11px] uppercase tracking-[0.2em] text-white/70 hover:text-white">
             Already have access?
           </Link>
         </nav>
 
         <section className="mt-10 rounded-[28px] border border-white/10 bg-white/[0.02] p-7 sm:p-10">
           <p className="text-[11px] uppercase tracking-[0.24em] text-[#D7C48A]">Global Auth</p>
-          <h1 className="mt-4 text-3xl font-semibold tracking-tight text-white sm:text-5xl">Sign up</h1>
-          <p className="mt-4 text-sm leading-7 text-white/70">
-            Start with your work email. Post-auth routing will send you to the correct StudioFlows experience based on product intent and entitlement.
-          </p>
+          <h1 className="mt-4 text-3xl font-semibold tracking-tight text-white sm:text-5xl">Create your StudioFlows account</h1>
+          <p className="mt-4 text-sm leading-7 text-white/70">Choose your preferred signup method.</p>
 
-          <form onSubmit={handleSubmit} className="mt-8 space-y-4">
-            <label className="block space-y-2">
-              <span className="text-[11px] uppercase tracking-[0.2em] text-white/46">Work Email</span>
-              <input
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="you@company.com"
-                className="w-full rounded-xl border border-white/12 bg-black/25 px-3 py-3 text-sm text-white outline-none placeholder:text-white/28 focus:border-[#BC9A2D]/55"
-              />
-            </label>
-
-            {status !== "idle" && (
-              <div
-                className={`rounded-lg border px-3 py-2 text-sm ${
-                  status === "success"
-                    ? "border-emerald-300/35 bg-emerald-300/10 text-emerald-200"
-                    : "border-red-300/35 bg-red-300/10 text-red-200"
-                }`}
-              >
-                {message}
-              </div>
-            )}
-
+          <div className="mt-8 space-y-4">
             <button
-              type="submit"
-              className="rounded-xl bg-[#BC9A2D] px-6 py-3 text-[11px] font-medium uppercase tracking-[0.2em] text-black transition hover:brightness-105"
+              type="button"
+              onClick={handleGoogleSignup}
+              className="w-full rounded-xl border border-white/20 bg-white/[0.03] px-6 py-3 text-[11px] font-medium uppercase tracking-[0.2em] text-white transition hover:bg-white/[0.07]"
             >
-              Send Magic Link
+              Continue with Google
             </button>
-          </form>
+
+            <form onSubmit={handleEmailSignup} className="space-y-4 rounded-xl border border-white/12 bg-black/20 p-4">
+              <label className="block space-y-2">
+                <span className="text-[11px] uppercase tracking-[0.2em] text-white/46">Email address</span>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="you@example.com"
+                  className="w-full rounded-xl border border-white/12 bg-black/25 px-3 py-3 text-sm text-white outline-none placeholder:text-white/28 focus:border-[#BC9A2D]/55"
+                />
+              </label>
+              <label className="block space-y-2">
+                <span className="text-[11px] uppercase tracking-[0.2em] text-white/46">Password</span>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  className="w-full rounded-xl border border-white/12 bg-black/25 px-3 py-3 text-sm text-white outline-none focus:border-[#BC9A2D]/55"
+                />
+              </label>
+              <button
+                type="submit"
+                className="rounded-xl bg-[#BC9A2D] px-6 py-3 text-[11px] font-medium uppercase tracking-[0.2em] text-black transition hover:brightness-105"
+              >
+                Create Account
+              </button>
+            </form>
+
+            <form onSubmit={handleMagicLink} className="space-y-3 rounded-xl border border-white/12 bg-black/20 p-4">
+              <p className="text-[11px] uppercase tracking-[0.2em] text-white/46">Magic link (optional)</p>
+              <label className="block space-y-2">
+                <span className="text-[11px] uppercase tracking-[0.2em] text-white/46">Email address</span>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="you@example.com"
+                  className="w-full rounded-xl border border-white/12 bg-black/25 px-3 py-3 text-sm text-white outline-none placeholder:text-white/28 focus:border-[#BC9A2D]/55"
+                />
+              </label>
+              <button
+                type="submit"
+                className="rounded-xl border border-white/20 bg-transparent px-6 py-3 text-[11px] font-medium uppercase tracking-[0.2em] text-white transition hover:bg-white/[0.04]"
+              >
+                Send Magic Link
+              </button>
+            </form>
+          </div>
+
+          {status !== "idle" && (
+            <div
+              className={`mt-4 rounded-lg border px-3 py-2 text-sm ${
+                status === "success"
+                  ? "border-emerald-300/35 bg-emerald-300/10 text-emerald-200"
+                  : "border-red-300/35 bg-red-300/10 text-red-200"
+              }`}
+            >
+              {message}
+            </div>
+          )}
         </section>
       </div>
     </main>
