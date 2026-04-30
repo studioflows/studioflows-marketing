@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { supabase } from "../../lib/supabase";
-import { authContextToQuery, buildAuthContextFromSearchParams } from "../../lib/auth/config";
+import { authContextToQuery, buildAuthCallbackUrl, buildAuthContextFromSearchParams } from "../../lib/auth/config";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
@@ -37,11 +37,7 @@ export default function SignupPage() {
   }
 
   function buildCallbackUrl(contextValue) {
-    const callbackUrl = new URL("/auth/callback", window.location.origin);
-    const query = authContextToQuery({ ...contextValue, intent: "signup" });
-    const params = new URLSearchParams(query);
-    for (const [key, value] of params.entries()) callbackUrl.searchParams.set(key, value);
-    return callbackUrl;
+    return buildAuthCallbackUrl({ ...contextValue, intent: "signup" });
   }
 
   async function handleEmailSignup(event) {
