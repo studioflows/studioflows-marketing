@@ -3,7 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { supabase } from "../../lib/supabase";
-import { authContextToQuery, buildAuthCallbackUrl, buildAuthContextFromSearchParams } from "../../lib/auth/config";
+import { authContextToQuery, buildAuthCallbackUrl, buildAuthCompleteUrl, buildAuthContextFromSearchParams } from "../../lib/auth/config";
+
+const AUTH_CONTEXT_STORAGE_KEY = "sf_auth_context";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
@@ -38,6 +40,10 @@ export default function SignupPage() {
 
   function buildCallbackUrl(contextValue) {
     return buildAuthCallbackUrl({ ...contextValue, intent: "signup" });
+  }
+
+  function buildCompleteUrl(contextValue) {
+    return buildAuthCompleteUrl({ ...contextValue, intent: "signup" });
   }
 
   async function handleEmailSignup(event) {
@@ -96,12 +102,13 @@ export default function SignupPage() {
       return;
     }
 
-    const callbackUrl = buildCallbackUrl(context);
+    const completeUrl = buildCompleteUrl(context);
+    window.sessionStorage.setItem(AUTH_CONTEXT_STORAGE_KEY, JSON.stringify({ ...context, intent: "signup" }));
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: callbackUrl.toString(),
+        redirectTo: completeUrl.toString(),
         queryParams: { prompt: "select_account" },
       },
     });

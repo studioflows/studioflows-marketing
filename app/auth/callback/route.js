@@ -22,9 +22,13 @@ export async function GET(request) {
   let error = null;
 
   if (code) {
-    const result = await supabase.auth.exchangeCodeForSession(code);
-    data = result.data;
-    error = result.error;
+    const completeUrl = new URL("/auth/complete", requestUrl.origin);
+    completeUrl.searchParams.set("code", code);
+    completeUrl.searchParams.set("intent", intent);
+    if (product) completeUrl.searchParams.set("product", product);
+    if (returnTo) completeUrl.searchParams.set("return_to", returnTo);
+    if (next) completeUrl.searchParams.set("next", next);
+    return NextResponse.redirect(completeUrl);
   } else if (tokenHash && tokenType) {
     const result = await supabase.auth.verifyOtp({
       token_hash: tokenHash,

@@ -3,7 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { supabase } from "../../lib/supabase";
-import { authContextToQuery, buildAuthCallbackUrl, buildAuthContextFromSearchParams } from "../../lib/auth/config";
+import { authContextToQuery, buildAuthCallbackUrl, buildAuthCompleteUrl, buildAuthContextFromSearchParams } from "../../lib/auth/config";
+
+const AUTH_CONTEXT_STORAGE_KEY = "sf_auth_context";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -38,6 +40,10 @@ export default function LoginPage() {
 
   function buildCallbackUrl(contextValue) {
     return buildAuthCallbackUrl({ ...contextValue, intent: "login" });
+  }
+
+  function buildCompleteUrl(contextValue) {
+    return buildAuthCompleteUrl({ ...contextValue, intent: "login" });
   }
 
   async function handlePasswordLogin(event) {
@@ -86,12 +92,13 @@ export default function LoginPage() {
       return;
     }
 
-    const callbackUrl = buildCallbackUrl(context);
+    const completeUrl = buildCompleteUrl(context);
+    window.sessionStorage.setItem(AUTH_CONTEXT_STORAGE_KEY, JSON.stringify({ ...context, intent: "login" }));
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: callbackUrl.toString(),
+        redirectTo: completeUrl.toString(),
         queryParams: { prompt: "select_account" },
       },
     });
