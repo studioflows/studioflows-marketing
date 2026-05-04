@@ -751,7 +751,7 @@ export default function Home() {
                   </div>
                   <div className="rounded-[20px] border border-white/8 bg-black/20 p-4">
                     <p className="text-[10px] uppercase tracking-[0.24em] text-white/30">System Architect</p>
-                    <p className="mt-3 text-4xl font-semibold tracking-tight text-white">{visibleFounderNumber || "Pending"}</p>
+                    <p className="mt-3 text-4xl font-semibold tracking-tight text-white">Pending</p>
                     <p className="mt-3 text-sm text-white/45">Assigned when identity clears.</p>
                   </div>
                 </div>
