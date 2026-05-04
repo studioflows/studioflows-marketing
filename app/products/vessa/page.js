@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import { useLocalStorage } from "react-use";
-import { supabase } from "../../../lib/supabase";
 
 const INSIGHT_CARDS = [
   {
@@ -310,28 +309,18 @@ function CircuitMap({ intensity }) {
   );
 }
 
+const SIGNUP_URL = "https://vessa.studioflows.co/vessa/login?intent=signup";
+
 export default function Home() {
-  const auditCardRef = useRef(null);
-  const heroEmailRef = useRef(null);
-  const auditEmailRef = useRef(null);
-  const auditTextareaRef = useRef(null);
-  const [email, setEmail] = useState("");
-  const [audit, setAudit] = useState("");
-  const [status, setStatus] = useState("idle");
   const [executionMode, setExecutionMode] = useState(false);
   const [intensity, setIntensity] = useState(64);
   const [hydrated, setHydrated] = useState(false);
   const [slots, setSlots] = useLocalStorage("sf_protocol_slots", 42);
-  const [founderNumber, setFounderNumber] = useLocalStorage("sf_founder_number", null);
   const [logs, setLogs] = useState(EXECUTION_LOGS.slice(0, 5));
   const [mouseGlow, setMouseGlow] = useState({ x: 50, y: 22 });
 
   useEffect(() => {
     setHydrated(true);
-  }, []);
-
-  useEffect(() => {
-    heroEmailRef.current?.focus();
   }, []);
 
   useEffect(() => {
@@ -379,81 +368,7 @@ export default function Home() {
     return () => window.clearTimeout(timeout);
   }, [setSlots]);
 
-  const activeFounderNumber = useMemo(() => {
-    if (founderNumber) return founderNumber;
-    return null;
-  }, [founderNumber]);
-
   const visibleSlots = hydrated && typeof slots === "number" ? slots : 42;
-  const visibleFounderNumber = hydrated ? activeFounderNumber : null;
-
-  const handleIntent = () => {
-    setSlots((prev) => {
-      if (typeof prev !== "number") return 41;
-      return prev > 5 ? prev - 1 : prev;
-    });
-  };
-
-  const scrollToAuditForm = () => {
-    const target = window.innerWidth < 1024 ? auditCardRef.current : document.getElementById("audit-form");
-    target?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
-  const focusAuditQuestion = () => {
-    window.setTimeout(() => {
-      auditTextareaRef.current?.focus();
-    }, 250);
-  };
-
-  const handleHeroSubmit = (event) => {
-    event.preventDefault();
-    if (!email.trim()) {
-      heroEmailRef.current?.focus();
-      return;
-    }
-
-    scrollToAuditForm();
-    focusAuditQuestion();
-  };
-
-  const handleSubmit = async () => {
-    const normalizedEmail = email.trim();
-    const normalizedAudit = audit.trim();
-
-    if (!normalizedEmail || !normalizedAudit) return;
-
-    setStatus("loading");
-    if (!supabase) {
-      setStatus("error");
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from("vessa_sessions")
-      .insert([
-        {
-          email: normalizedEmail,
-          bottleneck: normalizedAudit,
-          status: "initiated",
-        },
-      ])
-      .select()
-      .single();
-
-    if (error || !data) {
-      setStatus("error");
-      return;
-    }
-
-    setTimeout(() => {
-      const params = new URLSearchParams({
-        session: String(data.id),
-        email: normalizedEmail,
-      });
-
-      window.location.href = `https://vessa.studioflows.co/?${params.toString()}`;
-    }, 200);
-  };
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#050607] text-[#F5F7F7]">
@@ -541,30 +456,14 @@ export default function Home() {
               Not every system qualifies for execution.
             </p>
 
-            <div className="mx-auto mt-10 max-w-md">
-              <form
-                onSubmit={handleHeroSubmit}
-                className="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/30 px-3 py-2"
+            <div className="mx-auto mt-10 max-w-md text-center">
+              <Link
+                href={SIGNUP_URL}
+                className="inline-flex rounded-2xl bg-gradient-to-r from-emerald-500 to-fuchsia-400 px-6 py-3 text-sm font-medium uppercase tracking-[0.2em] text-black"
               >
-                <input
-                  ref={heroEmailRef}
-                  autoFocus
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email"
-                  className="flex-1 bg-transparent px-2 py-2 text-sm text-white outline-none placeholder:text-white/30"
-                />
-                <button
-                  type="submit"
-                  className="rounded-xl bg-gradient-to-r from-emerald-500 to-fuchsia-400 px-4 py-2 text-xs uppercase tracking-[0.2em] text-black"
-                >
-                  Start
-                </button>
-              </form>
-
-              <p className="mt-3 text-center text-xs text-white/35">
-                Enter the execution layer
-              </p>
+                Start with Vessa
+              </Link>
+              <p className="mt-3 text-xs text-white/35">Enter the execution layer</p>
             </div>
 
             <div className="mt-10 flex flex-wrap items-center justify-center gap-3 text-[11px] uppercase tracking-[0.26em] text-white/38">
@@ -858,93 +757,18 @@ export default function Home() {
                 </div>
               </div>
 
-              <div
-                ref={auditCardRef}
-                className="rounded-[24px] border border-emerald-400/14 bg-emerald-400/[0.04] p-5 shadow-[0_0_0_1px_rgba(74,222,128,0.06),0_20px_80px_rgba(0,0,0,0.45)]"
-              >
-                <form
-                  className="space-y-4"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    handleSubmit();
-                  }}
+              <div className="rounded-[24px] border border-emerald-400/14 bg-emerald-400/[0.04] p-5 shadow-[0_0_0_1px_rgba(74,222,128,0.06),0_20px_80px_rgba(0,0,0,0.45)]">
+                <div className="rounded-2xl border border-white/8 bg-black/30 p-4 font-mono text-[12px] leading-5 text-white/58">
+                  <div>&gt; Intake open.</div>
+                  <div>&gt; Execution slots available: {visibleSlots}</div>
+                  <div>&gt; Active founders being processed: 17</div>
+                </div>
+                <Link
+                  href={SIGNUP_URL}
+                  className="mt-4 flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-emerald-500 to-fuchsia-400 px-5 py-4 text-sm font-medium uppercase tracking-[0.22em] text-black transition hover:translate-y-[-1px] hover:shadow-[0_0_40px_rgba(74,222,128,0.18)]"
                 >
-                  <div>
-                    <label className="mb-2 block text-[10px] uppercase tracking-[0.24em] text-white/35">Email</label>
-                    <input
-                      ref={auditEmailRef}
-                      value={email}
-                      onFocus={handleIntent}
-                      onMouseEnter={handleIntent}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Verify Identity"
-                      className="w-full rounded-2xl border border-white/10 bg-black/25 px-4 py-3.5 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-emerald-400/45"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-[10px] uppercase tracking-[0.24em] text-white/35">Founder Audit</label>
-                    <textarea
-                      ref={auditTextareaRef}
-                      value={audit}
-                      onFocus={handleIntent}
-                      onChange={(e) => setAudit(e.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" && !event.shiftKey) {
-                          event.preventDefault();
-                          handleSubmit();
-                        }
-                      }}
-                      rows={5}
-                      placeholder="What is the one operational decision you make every week that you wish was automated?"
-                      className="w-full rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-emerald-400/45"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-fuchsia-400 px-5 py-4 text-sm font-medium uppercase tracking-[0.22em] text-black transition hover:translate-y-[-1px] hover:shadow-[0_0_40px_rgba(74,222,128,0.18)]"
-                  >
-                    {status === "loading" ? "Initializing..." : "Start"}
-                  </button>
-
-                  <div className="rounded-2xl border border-white/8 bg-black/30 p-4 font-mono text-[12px] leading-5 text-white/58">
-                    {status === "idle" && (
-                      <>
-                        <div>&gt; Intake open.</div>
-                        <div>&gt; Unverified identities are ignored.</div>
-                        <div>&gt; Founder audit improves queue priority.</div>
-                      </>
-                    )}
-                    {status === "loading" && (
-                      <>
-                        <div>&gt; Analyzing execution bottleneck...</div>
-                        <div>&gt; Detecting repetitive decision loop...</div>
-                        <div>&gt; Estimating recoverable hours...</div>
-                      </>
-                    )}
-                    {status === "submitted" && (
-                      <>
-                        <div>&gt; Bottleneck classified.</div>
-                        <div>&gt; Estimated recovery: 9.4 hrs/week.</div>
-                        <div>&gt; Status: Under review.</div>
-                        <div>&gt; Identity submitted to protocol.</div>
-                      </>
-                    )}
-                    {status === "duplicate" && (
-                      <>
-                        <div>&gt; Identity already present in queue.</div>
-                        <div>&gt; Status preserved. No duplicate created.</div>
-                      </>
-                    )}
-                    {status === "error" && (
-                      <>
-                        <div>&gt; Verification failed.</div>
-                        <div>&gt; Retry once systems stabilize.</div>
-                      </>
-                    )}
-                  </div>
-                </form>
+                  Start with Vessa
+                </Link>
               </div>
             </div>
           </GridCard>
