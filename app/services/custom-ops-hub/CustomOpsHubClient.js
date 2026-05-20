@@ -639,7 +639,7 @@ export default function CustomOpsHubClient() {
                 onClick={() => updateSingleValue(field.name, option)}
                 className={`rounded-xl border px-4 py-3 text-left text-sm transition ${
                   isActive
-                    ? "border-[#BC9A2D]/60 bg-[#BC9A2D]/15 text-[#F1E2B6]"
+                    ? "border-[#FACC15]/60 bg-[#FACC15]/15 text-[#FDE68A]"
                     : "border-white/10 bg-black/25 text-white/80 hover:border-white/30 hover:bg-white/[0.04]"
                 }`}
               >
@@ -663,7 +663,7 @@ export default function CustomOpsHubClient() {
                 onClick={() => toggleMultiValue(field.name, option)}
                 className={`rounded-xl border px-4 py-3 text-left text-sm transition ${
                   selected
-                    ? "border-[#BC9A2D]/60 bg-[#BC9A2D]/15 text-[#F1E2B6]"
+                    ? "border-[#FACC15]/60 bg-[#FACC15]/15 text-[#FDE68A]"
                     : "border-white/10 bg-black/25 text-white/80 hover:border-white/30 hover:bg-white/[0.04]"
                 }`}
               >
@@ -683,7 +683,7 @@ export default function CustomOpsHubClient() {
           onChange={(event) => updateInputValue(field.name, event.target.value)}
           rows={3}
           placeholder={field.placeholder}
-          className="mt-3 w-full rounded-xl border border-white/12 bg-black/25 px-4 py-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-[#BC9A2D]/55"
+          className="mt-3 w-full rounded-xl border border-white/12 bg-black/25 px-4 py-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-[#FACC15]/55"
         />
       );
     }
@@ -706,15 +706,16 @@ export default function CustomOpsHubClient() {
         value={value}
         onChange={(event) => updateInputValue(field.name, event.target.value)}
         placeholder={field.placeholder}
-        className="mt-3 w-full rounded-xl border border-white/12 bg-black/25 px-4 py-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-[#BC9A2D]/55"
+        className="mt-3 w-full rounded-xl border border-white/12 bg-black/25 px-4 py-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-[#FACC15]/55"
       />
     );
   };
 
   if (showBookingStep) {
     return (
-      <main className="relative min-h-screen overflow-hidden bg-[#272727] text-[#F7F7F7]">
-        <div className="pointer-events-none absolute inset-0 opacity-[0.12] [background-image:linear-gradient(rgba(255,255,255,0.09)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.09)_1px,transparent_1px)] [background-size:64px_64px]" />
+      <main className="relative min-h-screen overflow-hidden bg-[#0A0A0A] text-[#F7F7F7]">
+        <div className="pointer-events-none absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,0.08)_0.5px,transparent_0.5px),linear-gradient(90deg,rgba(255,255,255,0.08)_0.5px,transparent_0.5px)] [background-size:64px_64px]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_0%,rgba(99,102,241,0.2),transparent_28%),radial-gradient(circle_at_82%_0%,rgba(168,85,247,0.14),transparent_34%)]" />
         <div className="relative z-10 mx-auto w-full max-w-[1100px] px-6 py-8 sm:px-8 lg:px-10">
           <nav className="flex items-center justify-center py-4 sm:py-5">
             <img
@@ -724,8 +725,8 @@ export default function CustomOpsHubClient() {
             />
           </nav>
 
-          <section className="mt-8 rounded-[28px] border border-[#BC9A2D]/35 bg-black/25 p-7 sm:p-10">
-            <p className="text-[11px] uppercase tracking-[0.24em] text-[#D7C48A]">Qualification Complete</p>
+          <section className="mt-8 rounded-[28px] border border-[#FACC15]/35 bg-black/25 p-7 sm:p-10">
+            <p className="text-[11px] uppercase tracking-[0.24em] text-[#FACC15]">Qualification Complete</p>
             <h1 className="mt-4 text-3xl font-semibold leading-tight tracking-tight text-white sm:text-5xl">
               You are pre-qualified.
               <br />
@@ -745,7 +746,7 @@ export default function CustomOpsHubClient() {
           </section>
 
           <section className="mt-8 rounded-[28px] border border-white/12 bg-white/[0.02] p-7 sm:p-10">
-            <p className="text-[11px] uppercase tracking-[0.24em] text-[#D7C48A]">Book Your Call</p>
+            <p className="text-[11px] uppercase tracking-[0.24em] text-[#FACC15]">Book Your Call</p>
             <p className="mt-3 text-sm leading-7 text-white/72">
               Pick your best time to meet. We will use your answers to focus the call on your most urgent operational
               constraints.
@@ -753,7 +754,7 @@ export default function CustomOpsHubClient() {
             <div
               id="booking-module-slot"
               data-lead-id={leadId || ""}
-              className="mt-6 rounded-2xl border border-dashed border-[#BC9A2D]/45 bg-black/30 p-8 text-center"
+              className="mt-6 rounded-2xl border border-dashed border-[#FACC15]/45 bg-black/30 p-8 text-center"
             >
               <p className="text-sm text-white/70">Your booking calendar will load here.</p>
               <p className="mt-2 text-xs text-white/45">If it does not load, we will follow up by email.</p>
@@ -766,8 +767,9 @@ export default function CustomOpsHubClient() {
 
   if (showDisqualifiedStep) {
     return (
-      <main className="relative min-h-screen overflow-hidden bg-[#272727] text-[#F7F7F7]">
-        <div className="pointer-events-none absolute inset-0 opacity-[0.12] [background-image:linear-gradient(rgba(255,255,255,0.09)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.09)_1px,transparent_1px)] [background-size:64px_64px]" />
+      <main className="relative min-h-screen overflow-hidden bg-[#0A0A0A] text-[#F7F7F7]">
+        <div className="pointer-events-none absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,0.08)_0.5px,transparent_0.5px),linear-gradient(90deg,rgba(255,255,255,0.08)_0.5px,transparent_0.5px)] [background-size:64px_64px]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_0%,rgba(99,102,241,0.2),transparent_28%),radial-gradient(circle_at_82%_0%,rgba(168,85,247,0.14),transparent_34%)]" />
         <div className="relative z-10 mx-auto w-full max-w-[1100px] px-6 py-8 sm:px-8 lg:px-10">
           <nav className="flex items-center justify-center py-4 sm:py-5">
             <img
@@ -778,7 +780,7 @@ export default function CustomOpsHubClient() {
           </nav>
 
           <section className="mt-8 rounded-[28px] border border-white/12 bg-black/25 p-7 sm:p-10">
-            <p className="text-[11px] uppercase tracking-[0.24em] text-[#D7C48A]">Thank You</p>
+            <p className="text-[11px] uppercase tracking-[0.24em] text-[#FACC15]">Thank You</p>
             <h1 className="mt-4 text-3xl font-semibold leading-tight tracking-tight text-white sm:text-5xl">
               We received your request.
               <br />
@@ -802,9 +804,9 @@ export default function CustomOpsHubClient() {
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#272727] text-[#F7F7F7]">
-      <div className="pointer-events-none absolute inset-0 opacity-[0.12] [background-image:linear-gradient(rgba(255,255,255,0.09)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.09)_1px,transparent_1px)] [background-size:64px_64px]" />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_8%,rgba(188,154,45,0.15),transparent_35%),radial-gradient(circle_at_88%_12%,rgba(188,154,45,0.08),transparent_35%)]" />
+    <main className="relative min-h-screen overflow-hidden bg-[#0A0A0A] text-[#F7F7F7]">
+      <div className="pointer-events-none absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,0.08)_0.5px,transparent_0.5px),linear-gradient(90deg,rgba(255,255,255,0.08)_0.5px,transparent_0.5px)] [background-size:64px_64px]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_0%,rgba(99,102,241,0.2),transparent_28%),radial-gradient(circle_at_82%_0%,rgba(168,85,247,0.14),transparent_34%)]" />
 
       <div className="relative z-10 mx-auto w-full max-w-[1100px] px-6 py-8 sm:px-8 lg:px-10">
         <nav className="flex items-center justify-center py-4 sm:py-5">
@@ -816,11 +818,11 @@ export default function CustomOpsHubClient() {
         </nav>
 
         <section className="py-10 text-center sm:py-14">
-          <p className="text-[11px] uppercase tracking-[0.28em] text-[#D7C48A]">StudioFlows Consulting</p>
+          <p className="text-[11px] uppercase tracking-[0.28em] text-[#FACC15]">StudioFlows</p>
           <h1 className="mx-auto mt-6 max-w-[900px] text-balance text-[2.2rem] font-semibold leading-[0.96] tracking-[-0.03em] sm:text-[3rem] lg:text-[4.8rem]">
-            Custom Ops Hub Solutions
+            OPS Drag Audit Qualifier
             <br />
-            <span className="text-white/58">for businesses ready to outgrow operational drag</span>
+            <span className="text-white/58">for teams ready to stop execution drag</span>
           </h1>
           <p className="mx-auto mt-6 max-w-[780px] text-balance text-[1rem] leading-7 text-white/74 sm:text-[1.1rem]">
             Answer a few focused questions in about 90 seconds so we can understand your priorities, urgency, and fit
@@ -831,13 +833,13 @@ export default function CustomOpsHubClient() {
         <section className="rounded-[28px] border border-white/12 bg-white/[0.02] p-6 sm:p-8">
           <div className="sticky top-2 z-20 -mx-2 rounded-xl border border-white/10 bg-[#1F1F1F]/95 px-2 py-2 backdrop-blur">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-[11px] uppercase tracking-[0.24em] text-[#D7C48A]">
+              <p className="text-[11px] uppercase tracking-[0.24em] text-[#FACC15]">
                 Question {questionIndex + 1} of {totalQuestions}
               </p>
               <p className="text-xs text-white/55">{progressMilestone}</p>
             </div>
             <div className="mt-3 h-2 w-full rounded-full bg-white/10">
-              <div className="h-2 rounded-full bg-[#BC9A2D] transition-all duration-300" style={{ width: `${progressPercent}%` }} />
+              <div className="h-2 rounded-full bg-[#FACC15] transition-all duration-300" style={{ width: `${progressPercent}%` }} />
             </div>
             <p className="mt-2 text-xs text-white/45">{progressPercent}% complete</p>
           </div>
@@ -851,7 +853,7 @@ export default function CustomOpsHubClient() {
               transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
             >
               <div className="mt-4 rounded-xl border border-white/10 bg-black/20 px-3 py-2.5">
-                <p className="text-[11px] uppercase tracking-[0.2em] text-[#D7C48A]/90">{currentQuestion.sectionTitle}</p>
+                <p className="text-[11px] uppercase tracking-[0.2em] text-[#FACC15]/90">{currentQuestion.sectionTitle}</p>
                 <p className="mt-1 text-xs leading-5 text-white/65">{currentQuestion.sectionChallenger}</p>
               </div>
 
@@ -905,7 +907,7 @@ export default function CustomOpsHubClient() {
                 type="button"
                 onClick={handleNext}
                 disabled={isSubmitting || currentQuestionNeedsInputBlock || currentQuestionHasInvalidBusinessEmail}
-                className="rounded-xl bg-[#BC9A2D] px-6 py-3 text-[11px] font-medium uppercase tracking-[0.2em] text-black transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-xl bg-[#FACC15] px-6 py-3 text-[11px] font-medium uppercase tracking-[0.2em] text-black transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {questionIndex === totalQuestions - 1 ? (isSubmitting ? "Submitting..." : "Qualify and Continue") : "Continue"}
               </button>
@@ -914,7 +916,7 @@ export default function CustomOpsHubClient() {
         </section>
 
         <section className="mt-6 rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:p-4">
-          <p className="px-1 text-[10px] uppercase tracking-[0.22em] text-[#D7C48A]">FAQ</p>
+          <p className="px-1 text-[10px] uppercase tracking-[0.22em] text-[#FACC15]">FAQ</p>
           <div className="mt-2 space-y-2">
             {FAQ_ITEMS.map((item, index) => {
               const isOpen = openFaqIndex === index;

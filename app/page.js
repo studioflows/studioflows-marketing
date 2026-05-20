@@ -1,636 +1,764 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { supabase } from "../lib/supabase";
 
-const OFFERING_POINTS = [
-  "Deterministic workflows",
-  "Enforced validation",
-  "No silent failure",
-  "Full traceability",
+const QUALIFIER_URL = "#diagnosis";
+const QUALIFIED_AUDIT_URL = "/services/custom-ops-hub";
+const WAITLIST_URL = "/vessa";
+
+const QUIZ_QUESTIONS = [
+  {
+    id: "team-size",
+    prompt: "Team size?",
+    options: [
+      { label: "1-4", score: 0 },
+      { label: "5-9", score: 1 },
+      { label: "10-14", score: 2 },
+      { label: "15-24", score: 3 },
+      { label: "25+", score: 3 },
+    ],
+  },
+  {
+    id: "founder-routes",
+    prompt: "Does the founder still route most handoffs and approvals?",
+    options: [
+      { label: "No", score: 0 },
+      { label: "Sometimes", score: 2 },
+      { label: "Yes", score: 3 },
+    ],
+  },
+  {
+    id: "sales-disappear",
+    prompt: "Do sales promises regularly disappear in delivery?",
+    options: [
+      { label: "No", score: 0 },
+      { label: "Occasionally", score: 2 },
+      { label: "Yes", score: 3 },
+    ],
+  },
+  {
+    id: "scheduling-manual",
+    prompt: "Is scheduling/crew/freelancer work mostly manual?",
+    options: [
+      { label: "No", score: 0 },
+      { label: "Partially", score: 2 },
+      { label: "Yes", score: 3 },
+    ],
+  },
+  {
+    id: "week-off",
+    prompt: "Can you take a full week off without things slipping?",
+    options: [
+      { label: "Yes", score: 0 },
+      { label: "Not reliably", score: 2 },
+      { label: "No", score: 3 },
+    ],
+  },
+  {
+    id: "work-lives",
+    prompt: "Where does most work currently live?",
+    options: [
+      { label: "Structured workflows", score: 0 },
+      { label: "Slack + PM tools", score: 2 },
+      { label: "Founder’s head / ad hoc", score: 3 },
+    ],
+  },
 ];
 
-const FLOW_STEPS = [
-  "Intent",
-  "Structured Plan",
-  "Validation",
-  "Execution",
-  "Evidence",
-  "Verified Outcome",
-];
-
-const SYSTEMS = [
+const DRAG_SYMPTOMS = [
   {
-    name: "Client Systems",
-    role: "Deployed",
-    title: "Built for controlled execution.",
-    body: "Production systems designed to hold under pressure.",
-    href: "/products/vessa",
+    title: "Sales promises vanish in delivery",
+    signal: "Sales closed fast, delivery slows down.",
+    leak: "Delivery inherits ambiguity, delays, and margin erosion.",
+    outcome: "Rework climbs, client trust drops, and margin gets squeezed.",
+    pressure: "Revenue Pressure: High",
   },
   {
-    name: "Internal Systems",
-    role: "Operated",
-    title: "Run continuously in the wild.",
-    body: "Used daily to validate structure, reliability, and control.",
+    title: "Founder becomes the router",
+    signal: "Approvals and escalations route through you all day.",
+    leak: "Execution speed gets capped by your personal throughput.",
+    outcome: "You become the bottleneck and the fallback system.",
+    pressure: "Revenue Pressure: High",
   },
   {
-    name: "Execution Layer",
-    role: "Coordinated",
-    title: "Intent becomes action.",
-    body: "Decisions are enforced through deterministic flow.",
+    title: "Tools track work but do not move it",
+    signal: "Dashboards show activity, but output stalls.",
+    leak: "Critical work sits in Slack threads and email limbo.",
+    outcome: "You have visibility, but no reliable velocity.",
+    pressure: "Revenue Pressure: Medium",
   },
   {
-    name: "Validation Layer",
-    role: "Enforced",
-    title: "No silent failure paths.",
-    body: "Each step is verified before the next one can move.",
-  },
-  {
-    name: "Evidence Layer",
-    role: "Traceable",
-    title: "Outcomes are attributable.",
-    body: "What happened, why, and by whom remains visible.",
+    title: "Nobody owns the handoff",
+    signal: "Ownership changes hands, but no one owns the handoff.",
+    leak: "Deadlines slip, rework multiplies, and accountability gets blurry.",
+    outcome: "Chaos hides in transitions and appears when clients are waiting.",
+    pressure: "Revenue Pressure: Medium",
   },
 ];
 
-const fadeIn = {
-  initial: { opacity: 0, y: 18 },
-  whileInView: { opacity: 1, y: 0 },
-  viewport: { once: true, amount: 0.22 },
-  transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] },
+const REC_FEATURES = [
+  {
+    id: "staff",
+    label: "STAFF ORCHESTRATION",
+    image: "/case-studies/rec/staff-schedule.png",
+    before: "Manual coordination chaos.",
+    installed: "One clean command surface for team lanes, jobs, and assignments.",
+    outcomes: [
+      "Faster dispatch decisions",
+      "Cleaner team assignments",
+      "Reduced scheduling drift",
+      "Founder time freed",
+    ],
+  },
+  {
+    id: "workspace",
+    label: "JOB WORKSPACE",
+    image: "/case-studies/rec/calendar-workspace.png",
+    before: "Rescheduling and assignment changes were fragmented and slow.",
+    installed: "Integrated job workspace with schedule control, status updates, and ownership clarity.",
+    outcomes: [
+      "Faster job rerouting",
+      "Fewer assignment misses",
+      "Cleaner handoffs",
+      "Less founder intervention",
+    ],
+  },
+];
+
+const VESSA_CARDS = [
+  {
+    title: "MosaIQ",
+    body: "Connects to email, Slack, AI notetakers, and project tools to ingest signals, learn context, and qualify high-impact work.",
+  },
+  {
+    title: "WorkStream",
+    body: "Turns qualified work into live execution lanes and runs actions autonomously across your operating system.",
+  },
+  {
+    title: "Decide",
+    body: "Delivers completed execution output to you for final approval with strict approve/edit/reject governance.",
+  },
+];
+
+const OPERATING_LAYER = [
+  {
+    title: "Control",
+    body: "Clear ownership, enforced approvals, deterministic paths from decision to action.",
+    before: "Everything funnels through you.",
+    after: "Decisions move automatically with clear accountability.",
+  },
+  {
+    title: "Execution",
+    body: "Scheduling, job flow, and runbook logic that holds under real pressure.",
+    before: "Heroic manual follow-up and constant context switching.",
+    after: "Work moves itself. Deadlines hold without founder intervention.",
+  },
+  {
+    title: "Visibility",
+    body: "Live bottleneck exposure and accountability without dashboard theater.",
+    before: "You learn it is broken after it is already on fire.",
+    after: "You see blockers, ownership, and priority instantly.",
+  },
+];
+
+const HERO_SIGNALS = [
+  "Missed handoffs compound fast",
+  "Approval bottlenecks kill throughput",
+  "Context switching drains margin",
+  "Founder dependency caps growth",
+  "Ops drag is measurable",
+];
+
+const HERO_METRICS = [
+  { label: "Revenue leakage", value: "20-40%" },
+  { label: "Pre-qualifier time", value: "30 sec" },
+  { label: "Audit conversion focus", value: "Operator-led" },
+];
+
+const SECTION_REVEAL = {
+  initial: { opacity: 0, y: 28, filter: "blur(8px)" },
+  whileInView: { opacity: 1, y: 0, filter: "blur(0px)" },
+  viewport: { once: true, amount: 0.2 },
+  transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] },
 };
 
-const COMPANY_SIZE_OPTIONS = ["1-10", "11-50", "51-200", "201-500", "500+"];
-const REVENUE_BAND_OPTIONS = ["Pre-revenue", "$0-1M", "$1M-10M", "$10M-50M", "$50M+"];
-const BUDGET_BAND_OPTIONS = ["<$25k", "$25k-75k", "$75k-150k", "$150k-300k", "$300k+"];
-const URGENCY_OPTIONS = ["Now (0-30 days)", "Near term (1-3 months)", "This year (3-12 months)"];
-const COMPLIANCE_OPTIONS = ["SOC 2", "HIPAA", "GDPR", "PCI", "FINRA/SEC", "Internal policy only"];
+function getAssessment(score) {
+  if (score >= 13) {
+    return {
+      title: "High Operational Drag",
+      body: "You likely have margin leakage and founder bottlenecking in your core execution flow.",
+      qualified: true,
+    };
+  }
+  if (score >= 8) {
+    return {
+      title: "Moderate Operational Drag",
+      body: "You have partial structure, but handoffs and ownership still leak execution.",
+      qualified: true,
+    };
+  }
+  return {
+    title: "Low to Moderate Drag",
+    body: "You may not need a full audit slot yet. We recommend waitlist and follow-up first.",
+    qualified: false,
+  };
+}
 
-const INITIAL_ACCESS_FORM = {
-  fullName: "",
-  workEmail: "",
-  roleTitle: "",
-  companyName: "",
-  companyWebsite: "",
-  industry: "",
-  companySizeBand: "",
-  annualRevenueBand: "",
-  implementationBudgetBand: "",
-  urgencyWindow: "",
-  decisionAuthority: "",
-  primaryUseCase: "",
-  currentSystems: "",
-  criticalBreakdown: "",
-  complianceScope: [],
-  notes: "",
-};
+function DiagnosisQuiz() {
+  const [questionIndex, setQuestionIndex] = useState(0);
+  const [answers, setAnswers] = useState([]);
 
-function SectionBlock({ id, tone = "default", children }) {
-  const toneClass =
-    tone === "offset"
-      ? "bg-[#2E2E2E]/70 border-[#BC9A2D]/35"
-      : "bg-white/[0.02] border-white/10";
+  const isComplete = questionIndex >= QUIZ_QUESTIONS.length;
+  const score = answers.reduce((sum, item) => sum + item.score, 0);
+  const assessment = getAssessment(score);
+  const currentQuestion = QUIZ_QUESTIONS[questionIndex];
+
+  const selectAnswer = (option) => {
+    const next = [...answers];
+    next[questionIndex] = option;
+    setAnswers(next);
+    setQuestionIndex((prev) => prev + 1);
+  };
+
+  if (isComplete) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: "easeOut" }}
+        className="rounded-2xl bg-black/35 p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.12)] sm:p-7"
+      >
+        <p className="text-[11px] uppercase tracking-[0.2em] text-[#FACC15]">Pre-Qualifier Complete</p>
+        <h3 className="mt-3 text-2xl font-bold">{assessment.title}</h3>
+        <p className="mt-3 text-sm leading-7 text-white/80">{assessment.body}</p>
+        <p className="mt-2 text-sm text-white/65">Ops Drag Snapshot: {score} / 18</p>
+
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+          {assessment.qualified ? (
+            <motion.div whileHover={{ y: -1.5 }} whileTap={{ scale: 0.99 }}>
+              <Link
+              href={QUALIFIED_AUDIT_URL}
+              className="rounded-xl bg-[#FACC15] px-6 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-black transition hover:brightness-105"
+            >
+              Book an OPS Drag Audit
+            </Link>
+            </motion.div>
+          ) : (
+            <motion.div whileHover={{ y: -1.5 }} whileTap={{ scale: 0.99 }}>
+              <Link
+              href={WAITLIST_URL}
+              className="rounded-xl bg-[#FACC15] px-6 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-black transition hover:brightness-105"
+            >
+              Join Vessa Waitlist
+            </Link>
+            </motion.div>
+          )}
+          <motion.button
+            type="button"
+            onClick={() => {
+              setQuestionIndex(0);
+              setAnswers([]);
+            }}
+            className="rounded-xl border border-white/30 px-6 py-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-white/[0.08]"
+            whileHover={{ y: -1.5 }}
+            whileTap={{ scale: 0.99 }}
+          >
+            Retake Pre-Qualifier
+          </motion.button>
+        </div>
+      </motion.div>
+    );
+  }
 
   return (
-    <motion.section id={id} {...fadeIn} className={`rounded-[28px] border p-7 sm:p-10 lg:p-12 ${toneClass}`}>
-      {children}
-    </motion.section>
+    <div className="rounded-2xl bg-black/35 p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.12)] sm:p-7">
+      <div className="flex items-center justify-between text-xs text-white/65">
+        <span>
+          Question {questionIndex + 1} of {QUIZ_QUESTIONS.length}
+        </span>
+        <span>{Math.round((questionIndex / QUIZ_QUESTIONS.length) * 100)}%</span>
+      </div>
+      <div className="mt-2 h-1.5 w-full rounded-full bg-white/10">
+        <motion.div
+          className="h-1.5 rounded-full bg-[#FACC15]"
+          animate={{ width: `${(questionIndex / QUIZ_QUESTIONS.length) * 100}%` }}
+          transition={{ duration: 0.35, ease: "easeOut" }}
+        />
+      </div>
+
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentQuestion.id}
+          initial={{ opacity: 0, y: 22 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -16 }}
+          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <h3 className="mt-5 text-xl font-semibold leading-8">{currentQuestion.prompt}</h3>
+          <div className="mt-4 space-y-2.5">
+            {currentQuestion.options.map((option, index) => (
+              <motion.button
+                key={option.label}
+                type="button"
+                onClick={() => selectAnswer(option)}
+                className="w-full rounded-xl bg-black/45 px-4 py-3 text-left text-sm text-white/88 shadow-[0_0_0_1px_rgba(255,255,255,0.12)] transition hover:bg-white/[0.08]"
+                whileHover={{ y: -2, scale: 1.005 }}
+                whileTap={{ scale: 0.995 }}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.03 * index, duration: 0.22 }}
+              >
+                {option.label}
+              </motion.button>
+            ))}
+          </div>
+        </motion.div>
+      </AnimatePresence>
+      <div className="mt-5">
+        <button
+          type="button"
+          disabled={questionIndex === 0}
+          onClick={() => setQuestionIndex((prev) => Math.max(prev - 1, 0))}
+          className="rounded-lg border border-white/25 px-4 py-2 text-[11px] uppercase tracking-[0.16em] text-white/75 disabled:opacity-45"
+        >
+          Back
+        </button>
+      </div>
+    </div>
   );
 }
 
-export default function Home() {
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitState, setSubmitState] = useState("idle");
-  const [submitMessage, setSubmitMessage] = useState("");
-  const [accessForm, setAccessForm] = useState(INITIAL_ACCESS_FORM);
+export default function HomePage() {
+  const [activeRecFeature, setActiveRecFeature] = useState(0);
+  const [activeSymptom, setActiveSymptom] = useState(0);
+  const [activeLayerCard, setActiveLayerCard] = useState(0);
+  const [showTransform, setShowTransform] = useState(true);
+  const [scrolled, setScrolled] = useState(false);
+  const [showMobileBar, setShowMobileBar] = useState(false);
+  const [showDesktopDiagnosis, setShowDesktopDiagnosis] = useState(false);
 
-  const openDrawer = () => {
-    setSubmitState("idle");
-    setSubmitMessage("");
-    setIsDrawerOpen(true);
-  };
-
-  const handleFieldChange = (event) => {
-    const { name, value } = event.target;
-    setAccessForm((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const toggleCompliance = (value) => {
-    setAccessForm((prev) => {
-      const alreadySelected = prev.complianceScope.includes(value);
-      return {
-        ...prev,
-        complianceScope: alreadySelected
-          ? prev.complianceScope.filter((item) => item !== value)
-          : [...prev.complianceScope, value],
-      };
-    });
-  };
-
-  const handleAccessSubmit = async (event) => {
-    event.preventDefault();
-    setSubmitState("idle");
-    setSubmitMessage("");
-
-    const requiredFields = [
-      ["fullName", "Full name"],
-      ["workEmail", "Work email"],
-      ["roleTitle", "Role title"],
-      ["companyName", "Company name"],
-      ["industry", "Industry"],
-      ["companySizeBand", "Company size"],
-      ["implementationBudgetBand", "Implementation budget"],
-      ["urgencyWindow", "Urgency window"],
-      ["decisionAuthority", "Decision authority"],
-      ["primaryUseCase", "Primary use case"],
-      ["criticalBreakdown", "Current execution breakdown"],
-    ];
-
-    const missingField = requiredFields.find(([field]) => !accessForm[field].trim());
-    if (missingField) {
-      setSubmitState("error");
-      setSubmitMessage(`${missingField[1]} is required.`);
-      return;
-    }
-
-    if (!supabase) {
-      setSubmitState("error");
-      setSubmitMessage("Submission is unavailable. Supabase environment variables are missing.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    const payload = {
-      full_name: accessForm.fullName.trim(),
-      work_email: accessForm.workEmail.trim().toLowerCase(),
-      role_title: accessForm.roleTitle.trim(),
-      company_name: accessForm.companyName.trim(),
-      company_website: accessForm.companyWebsite.trim() || null,
-      industry: accessForm.industry.trim(),
-      company_size_band: accessForm.companySizeBand,
-      annual_revenue_band: accessForm.annualRevenueBand || null,
-      implementation_budget_band: accessForm.implementationBudgetBand,
-      urgency_window: accessForm.urgencyWindow,
-      decision_authority: accessForm.decisionAuthority.trim(),
-      primary_use_case: accessForm.primaryUseCase.trim(),
-      current_systems: accessForm.currentSystems.trim() || null,
-      critical_breakdown: accessForm.criticalBreakdown.trim(),
-      compliance_scope: accessForm.complianceScope,
-      notes: accessForm.notes.trim() || null,
-      source_page: "home",
-      metadata: {
-        path: typeof window !== "undefined" ? window.location.pathname : "/",
-      },
+  useEffect(() => {
+    const onScroll = () => {
+      const y = window.scrollY;
+      setScrolled(y > 80);
+      setShowMobileBar(y > 420);
+      setShowDesktopDiagnosis(y > 420);
     };
-
-    const { error } = await supabase.from("access_interest_leads").insert([payload]);
-    setIsSubmitting(false);
-
-    if (error) {
-      setSubmitState("error");
-      setSubmitMessage(error.message || "Unable to submit interest at this time.");
-      return;
-    }
-
-    setSubmitState("success");
-    setSubmitMessage("Access request submitted. Our team will pre-vet and follow up.");
-    setAccessForm(INITIAL_ACCESS_FORM);
-  };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#272727] text-[#F7F7F7]">
-      <div className="pointer-events-none absolute inset-0 opacity-[0.12] [background-image:linear-gradient(rgba(255,255,255,0.09)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.09)_1px,transparent_1px)] [background-size:64px_64px]" />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(188,154,45,0.18),transparent_28%),radial-gradient(circle_at_20%_35%,rgba(188,154,45,0.08),transparent_32%)]" />
+    <main className="min-h-screen bg-[#0A0A0A] pb-24 text-white md:pb-16">
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_15%_0%,rgba(99,102,241,0.2),transparent_26%),radial-gradient(circle_at_82%_0%,rgba(168,85,247,0.15),transparent_32%)]" />
+      <motion.div
+        className="pointer-events-none fixed -left-24 top-[18%] h-72 w-72 rounded-full bg-indigo-500/20 blur-[90px]"
+        animate={{ x: [0, 24, -12, 0], y: [0, -18, 8, 0], opacity: [0.38, 0.55, 0.42, 0.38] }}
+        transition={{ duration: 12, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
+      />
+      <motion.div
+        className="pointer-events-none fixed -right-24 top-[44%] h-80 w-80 rounded-full bg-purple-500/20 blur-[100px]"
+        animate={{ x: [0, -30, 16, 0], y: [0, 20, -12, 0], opacity: [0.32, 0.5, 0.4, 0.32] }}
+        transition={{ duration: 14, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
+      />
 
-      <div className="relative z-10 mx-auto w-full max-w-[1200px] px-6 py-8 sm:px-8 lg:px-10">
-        <nav className="flex items-center justify-between py-4 sm:py-5">
-          <img
-            src="/StudioFlows logo white (1200 x 675 px).png"
-            alt="StudioFlows"
-            className="h-12 w-auto object-contain opacity-90 sm:h-14"
-          />
-          <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/[0.02] px-1.5 py-1.5 md:flex">
-            {[
-              ["StudioFlows", "/"],
-              ["Axiom", "/axiom"],
-              ["Products", "/products"],
-              ["Enterprise", "/enterprise"],
-              ["Apply", "/apply"],
-              ["Vessa", "/vessa"],
-            ].map(([label, href]) => (
-              <Link
-                key={label}
-                href={href}
-                className="rounded-full px-3 py-2 text-[11px] uppercase tracking-[0.2em] text-white/75 transition hover:bg-white/[0.07] hover:text-white"
+      <header
+        className={`fixed inset-x-0 top-0 z-40 transition ${
+          scrolled ? "border-b border-white/10 bg-[#0A0A0A]/88 backdrop-blur" : "bg-transparent"
+        }`}
+      >
+        <div className="mx-auto flex w-full max-w-[1240px] items-center justify-between px-5 py-3 sm:px-8 lg:px-10">
+          <img src="/StudioFlows logo white (1200 x 675 px).png" alt="StudioFlows" className="h-10 w-auto object-contain sm:h-11" />
+          <nav className="hidden items-center gap-6 text-sm text-white/82 md:flex">
+            <a href="#diagnosis" className="transition hover:text-white">
+              Start Pre-Qualifier
+            </a>
+            <a href="#diagnosis" className="transition hover:text-white">
+              Watch Breakdown
+            </a>
+            <a href="#vessa" className="transition hover:text-white">
+              See Products
+            </a>
+            <Link
+              href={QUALIFIER_URL}
+              className={`rounded-full px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.18em] transition ${
+                scrolled
+                  ? "bg-[#FACC15] text-black shadow-[0_10px_30px_rgba(250,204,21,0.35)] hover:brightness-105"
+                  : "border border-white/25 text-white hover:bg-white/[0.08]"
+              }`}
+            >
+              Book Audit
+            </Link>
+          </nav>
+        </div>
+      </header>
+
+      {showDesktopDiagnosis && (
+        <div className="fixed bottom-6 right-6 z-40 hidden lg:block">
+          <a
+            href="#diagnosis"
+            className="rounded-full bg-[#FACC15] px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-black shadow-[0_10px_30px_rgba(250,204,21,0.35)] transition hover:brightness-105"
+          >
+            Start Pre-Qualifier
+          </a>
+        </div>
+      )}
+
+      <div className="relative z-10 mx-auto w-full max-w-[1240px] px-5 pt-20 sm:px-8 lg:px-10">
+        <motion.section className="flex min-h-[92vh] flex-col justify-center py-10" {...SECTION_REVEAL}>
+          <p className="text-[11px] uppercase tracking-[0.24em] text-[#FACC15]">STUDIOFLOWS</p>
+          <h1 className="mt-6 max-w-[1080px] text-[clamp(2.5rem,8vw,6.4rem)] font-bold leading-[0.93] tracking-[-0.03em]">
+            Growth didn&apos;t break your business.
+            <br />
+            <span className="bg-[linear-gradient(90deg,#FACC15,#C4B5FD,#7DD3FC)] bg-clip-text text-transparent">
+              Operational drag did.
+            </span>
+          </h1>
+          <p className="mt-7 max-w-[1080px] text-[clamp(1.05rem,2.1vw,1.7rem)] font-light leading-[1.38] text-white/84">
+            Most founder-led teams bleed 20-40% of revenue through missed handoffs, approval bottlenecks, Slack chaos,
+            and work that gets tracked but never moves.
+            <br />
+            Take this 30-second pre-qualifier and get a quick ops drag readout.
+          </p>
+          <motion.div className="mt-9 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center" initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}>
+            <motion.a
+              href="#diagnosis"
+              className="w-full rounded-xl bg-[#FACC15] px-5 py-3.5 text-center text-[10px] font-semibold uppercase tracking-[0.12em] text-black shadow-[0_12px_35px_rgba(250,204,21,0.35)] transition hover:brightness-105 sm:w-auto sm:px-7 sm:text-[11px] sm:tracking-[0.2em]"
+              whileHover={{ y: -2 }}
+              whileTap={{ scale: 0.99 }}
+            >
+              Start the 30-Second Pre-Qualifier
+            </motion.a>
+            <motion.a
+              href="#diagnosis"
+              className="w-full rounded-xl border border-white/35 px-5 py-3.5 text-center text-[10px] font-semibold uppercase tracking-[0.12em] text-white transition hover:bg-white/[0.08] sm:w-auto sm:px-7 sm:text-[11px] sm:tracking-[0.2em]"
+              whileHover={{ y: -2 }}
+              whileTap={{ scale: 0.99 }}
+            >
+              Watch the Full Breakdown
+            </motion.a>
+          </motion.div>
+          <p className="mt-5 max-w-[880px] text-sm text-white/68">
+            Built for agencies, consultancies, service businesses, and B2B SaaS teams.
+          </p>
+          <motion.div
+            className="mt-7 overflow-hidden rounded-xl bg-[linear-gradient(125deg,rgba(17,24,39,0.8),rgba(30,27,75,0.7))] p-3 shadow-[inset_0_0_0_1px_rgba(196,181,253,0.25)]"
+            initial={{ opacity: 0, y: 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            <motion.div
+              className="flex w-max items-center gap-2"
+              animate={{ x: ["0%", "-50%"] }}
+              transition={{ duration: 18, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+            >
+              {[...HERO_SIGNALS, ...HERO_SIGNALS].map((item, index) => (
+                <span
+                  key={`${item}-${index}`}
+                  className="rounded-full bg-white/[0.06] px-3 py-1 text-[10px] uppercase tracking-[0.15em] text-[#C7D2FE] shadow-[inset_0_0_0_1px_rgba(199,210,254,0.2)]"
+                >
+                  {item}
+                </span>
+              ))}
+            </motion.div>
+          </motion.div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            {HERO_METRICS.map((item, index) => (
+              <motion.div
+                key={item.label}
+                className="rounded-xl bg-[linear-gradient(145deg,rgba(8,12,24,0.88),rgba(17,24,39,0.72))] p-4 shadow-[0_14px_30px_rgba(0,0,0,0.45),inset_0_0_0_1px_rgba(125,211,252,0.18)]"
+                initial={{ opacity: 0, y: 12 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.06, duration: 0.3 }}
+                whileHover={{ y: -3, scale: 1.01 }}
               >
-                {label}
-              </Link>
+                <p className="text-[10px] uppercase tracking-[0.18em] text-white/62">{item.label}</p>
+                <p className="mt-1 text-lg font-semibold text-[#E0E7FF]">{item.value}</p>
+              </motion.div>
             ))}
           </div>
-        </nav>
+        </motion.section>
 
-        <section className="py-14 text-center lg:py-20">
-          <motion.div {...fadeIn} className="mx-auto max-w-[920px]">
-            <p className="text-[11px] uppercase tracking-[0.28em] text-[#D7C48A]">StudioFlows</p>
-            <h1 className="mt-6 text-balance text-[2.4rem] font-semibold leading-[0.96] tracking-[-0.03em] sm:text-[3.1rem] lg:text-[5.8rem]">
-              Most companies don&apos;t have a growth problem.
-              <br />
-              <span className="text-white/58">They have a control problem.</span>
-            </h1>
-            <p className="mx-auto mt-7 max-w-[760px] text-balance text-[1.05rem] leading-7 text-white/75 sm:text-[1.15rem]">
-              StudioFlows builds controlled AI execution systems for companies that can&apos;t afford to drift.
-            </p>
-            <p className="mt-4 text-[12px] uppercase tracking-[0.24em] text-[#D7C48A]/85">
-              Legal. Finance. Healthcare. High-stakes SaaS.
-            </p>
+        <motion.section id="diagnosis" className="pt-32 sm:pt-36 lg:pt-40" {...SECTION_REVEAL}>
+          <h2 className="max-w-[980px] text-left text-[clamp(2rem,4vw,4rem)] font-bold leading-tight tracking-[-0.02em]">
+            The 30-Second Pre-Qualifier: Do You Have Operational Drag?
+          </h2>
+          <p className="mt-4 max-w-[980px] text-left text-lg leading-8 text-white/80">
+            Six quick questions to show where execution is leaking and whether an audit makes sense.
+          </p>
+          <div className="mt-7">
+            <DiagnosisQuiz />
+          </div>
+          <p className="mt-4 text-sm text-white/62">
+            Answer honestly. If it looks like a fit, you can book an audit.
+          </p>
+        </motion.section>
 
-            <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
-              <button
-                type="button"
-                onClick={openDrawer}
-                className="rounded-xl bg-[#BC9A2D] px-6 py-3 text-[11px] font-medium uppercase tracking-[0.2em] text-black transition hover:brightness-105"
-              >
-                Apply for Access
-              </button>
-              <Link
-                href="#how-it-works"
-                className="rounded-xl border border-white/20 bg-transparent px-6 py-3 text-[11px] uppercase tracking-[0.2em] text-white/85 transition hover:bg-white/[0.04]"
-              >
-                Explore the System
-              </Link>
-            </div>
-          </motion.div>
-        </section>
-
-        <div className="space-y-10 pb-16">
-          <SectionBlock>
-            <div className="max-w-[780px] space-y-5">
-              <p className="text-2xl font-semibold tracking-tight text-white">You&apos;ve been told to:</p>
-              <p className="text-lg text-white/72">automate more</p>
-              <p className="text-lg text-white/72">move faster</p>
-              <p className="text-lg text-white/72">leverage AI</p>
-              <p className="pt-2 text-base text-white/75">But here&apos;s what actually happens:</p>
-              <p className="text-white/62">Decisions don&apos;t translate into execution</p>
-              <p className="text-white/62">Systems drift out of alignment</p>
-              <p className="text-white/62">Teams operate on outdated context</p>
-              <p className="text-white/62">Automation multiplies chaos</p>
-              <p className="pt-2 text-xl font-medium text-[#F1E2B6]">Until it&apos;s expensive.</p>
-            </div>
-          </SectionBlock>
-
-          <SectionBlock>
-            <p className="text-3xl font-semibold tracking-tight text-white sm:text-5xl">
-              This isn&apos;t a tooling problem.
-              <br />
-              <span className="text-white/58">It&apos;s a control problem.</span>
-            </p>
-            <p className="mt-6 max-w-[900px] text-base leading-7 text-white/68 sm:text-lg">
-              Most software helps you do more. Almost none of it guarantees: what you intend is what actually happens.
-            </p>
-          </SectionBlock>
-
-          <SectionBlock>
-            <div className="grid gap-6 lg:grid-cols-3">
-              <p className="text-2xl font-semibold text-white">Speed without control is fragile.</p>
-              <p className="text-2xl font-semibold text-white">Control without speed is slow.</p>
-              <p className="text-2xl font-semibold text-[#F1E2B6]">We build systems that do both.</p>
-            </div>
-          </SectionBlock>
-
-          <SectionBlock id="how-it-works">
-            <div className="grid gap-8 lg:grid-cols-[1fr_1fr]">
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.24em] text-[#D7C48A]">What StudioFlows Does</p>
-                <h2 className="mt-4 text-3xl font-semibold leading-tight tracking-tight text-white sm:text-5xl">
-                  We design and deploy controlled execution infrastructure.
-                </h2>
-              </div>
-              <div className="space-y-3">
-                {OFFERING_POINTS.map((point) => (
-                  <div key={point} className="rounded-2xl border border-white/12 bg-black/20 px-4 py-3 text-sm text-white/78">
-                    {point}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </SectionBlock>
-
-          <SectionBlock tone="offset">
-            <div className="mx-auto max-w-[880px] text-center">
-              <p className="text-[11px] uppercase tracking-[0.24em] text-[#D7C48A]">Axiom</p>
-              <p className="mt-6 text-lg leading-8 text-white/75">There&apos;s a layer behind everything we build.</p>
-              <p className="mt-3 text-white/72">You won&apos;t see it.</p>
-              <p className="text-white/72">You won&apos;t configure it.</p>
-              <p className="text-white/72">But it&apos;s always there.</p>
-              <p className="mt-8 text-4xl font-semibold tracking-tight text-[#F1E2B6]">Axiom</p>
-              <div className="mt-8 space-y-2 text-white/72">
-                <p>no drift</p>
-                <p>no silent failure</p>
-                <p>no system breakdown</p>
-              </div>
-            </div>
-          </SectionBlock>
-
-          <SectionBlock>
-            <p className="text-[11px] uppercase tracking-[0.24em] text-[#D7C48A]">Enterprise Offering</p>
-            <h2 className="mt-4 max-w-[900px] text-3xl font-semibold leading-tight tracking-tight text-white sm:text-5xl">
-              We partner with SaaS companies to build production-grade AI capabilities.
-            </h2>
-            <p className="mt-8 text-base text-white/60">This is not adding AI.</p>
-            <p className="mt-2 text-2xl font-semibold text-[#F1E2B6]">This is building a production line for intelligence.</p>
-          </SectionBlock>
-
-          <SectionBlock>
-            <p className="text-[11px] uppercase tracking-[0.24em] text-[#D7C48A]">Products Bridge</p>
-            <p className="mt-4 text-lg text-white/76">We don&apos;t just build systems for clients.</p>
-            <p className="mt-2 text-lg text-[#F1E2B6]">We build them for ourselves and deploy them in the wild.</p>
-          </SectionBlock>
-
-          <SectionBlock>
-            <p className="text-[11px] uppercase tracking-[0.24em] text-[#D7C48A]">Operational Systems</p>
-            <h3 className="mt-4 text-3xl font-semibold tracking-tight text-white sm:text-5xl">
-              Controlled systems.
-              <br />
-              <span className="text-white/58">Deployed with discipline.</span>
-            </h3>
-            <p className="mt-6 max-w-[900px] text-base leading-7 text-white/72 sm:text-lg">
-              StudioFlows systems are designed to preserve control as complexity scales.
-            </p>
-            <p className="mt-8 text-[11px] uppercase tracking-[0.24em] text-[#D7C48A]">System Properties</p>
-            <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-              {SYSTEMS.map((system) => {
-                const CardTag = system.href ? Link : "div";
+        <motion.section className="pt-32 sm:pt-36 lg:pt-40" {...SECTION_REVEAL}>
+          <p className="text-[11px] uppercase tracking-[0.24em] text-[#C4B5FD]">Revenue Leakage Signals</p>
+          <h2 className="text-left text-[clamp(2rem,4vw,4rem)] font-bold leading-tight tracking-[-0.02em]">
+            Operational drag is expensive.
+            <br />
+            <span className="text-[#DDD6FE]">It shows up fast, and it hurts.</span>
+          </h2>
+          <p className="mt-4 max-w-[900px] text-left text-lg leading-8 text-white/82">
+            Every week you tolerate these, you&apos;re leaking revenue, time, and sanity.
+          </p>
+          <p className="mt-1 text-sm font-medium text-[#C4B5FD]/90">Tap each signal to see where the leak compounds.</p>
+          <div className="mt-7 rounded-[26px] bg-[linear-gradient(150deg,rgba(20,18,42,0.9),rgba(7,12,24,0.95),rgba(14,11,33,0.92))] p-4 shadow-[0_24px_70px_rgba(8,8,20,0.7),inset_0_0_0_1px_rgba(196,181,253,0.2)] sm:p-6">
+            <div className="grid gap-2 sm:grid-cols-2">
+              {DRAG_SYMPTOMS.map((item, index) => {
+                const isActive = activeSymptom === index;
                 return (
-                  <CardTag
-                    key={system.name}
-                    href={system.href || undefined}
-                    className="rounded-2xl border border-white/12 bg-black/20 p-4 transition hover:border-[#BC9A2D]/45 hover:bg-[#BC9A2D]/[0.06]"
+                  <button
+                    key={item.title}
+                    type="button"
+                    onClick={() => setActiveSymptom(index)}
+                    onMouseEnter={() => setActiveSymptom(index)}
+                    className={`rounded-xl px-4 py-3 text-left transition ${
+                      isActive
+                        ? "bg-[linear-gradient(125deg,rgba(99,102,241,0.35),rgba(168,85,247,0.32))] shadow-[0_0_0_1px_rgba(196,181,253,0.58),0_14px_30px_rgba(79,70,229,0.25)]"
+                        : "bg-black/25 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)] hover:bg-white/[0.05]"
+                    }`}
                   >
-                    <p className="text-[11px] uppercase tracking-[0.22em] text-white/44">
-                      {system.name} — {system.role}
-                    </p>
-                    <p className="mt-3 text-lg font-semibold tracking-tight text-white">{system.title}</p>
-                    <p className="mt-2 text-sm leading-6 text-white/68">{system.body}</p>
-                  </CardTag>
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-[#C4B5FD]/88">Signal {index + 1}</p>
+                    <p className="mt-1 text-sm font-semibold leading-6 text-white">{item.title}</p>
+                  </button>
                 );
               })}
             </div>
-            <p className="mt-7 text-base text-white/72">System-first execution. Control-first outcomes.</p>
-          </SectionBlock>
-
-          <SectionBlock>
-            <p className="text-2xl font-semibold tracking-tight text-white">We don&apos;t ship experiments.</p>
-            <p className="mt-5 text-white/72">We ship systems that hold under pressure, scale without breaking, and produce predictable outcomes.</p>
-            <p className="mt-5 text-[#F1E2B6]">That&apos;s the difference.</p>
-          </SectionBlock>
-
-          <SectionBlock>
-            <p className="text-[11px] uppercase tracking-[0.24em] text-[#D7C48A]">Private Engagements</p>
-            <p className="mt-4 max-w-[900px] text-xl leading-8 text-white/78">
-              We work with a small number of companies directly. This is not advisory.
-            </p>
-            <div className="mt-7 grid gap-4 sm:grid-cols-3">
-              {["system architecture", "full implementation", "deep integration"].map((item) => (
-                <div key={item} className="rounded-2xl border border-white/12 bg-black/20 px-4 py-3 text-sm uppercase tracking-[0.16em] text-white/76">
-                  {item}
-                </div>
-              ))}
-            </div>
-            <p className="mt-7 text-base text-[#F1E2B6]">We don&apos;t give recommendations. We build the machine.</p>
-          </SectionBlock>
-
-          <SectionBlock>
-            <div className="grid gap-6 lg:grid-cols-2">
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.24em] text-white/40">If you&apos;re looking for:</p>
-                <div className="mt-4 space-y-2 text-white/68">
-                  <p>quick automation hacks</p>
-                  <p>generic AI integrations</p>
-                  <p>surface-level improvements</p>
-                </div>
-                <p className="mt-5 text-white/78">This isn&apos;t for you.</p>
-              </div>
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.24em] text-white/40">If you need:</p>
-                <div className="mt-4 space-y-2 text-[#F1E2B6]">
-                  <p>precision</p>
-                  <p>control</p>
-                  <p>systems that actually hold</p>
-                </div>
-                <p className="mt-5 text-white/92">Then we should talk.</p>
-              </div>
-            </div>
-          </SectionBlock>
-
-          <SectionBlock>
-            <p className="text-3xl font-semibold leading-tight tracking-tight text-white sm:text-5xl">
-              Most companies move fast.
-              <br />
-              <span className="text-white/60">Very few stay aligned.</span>
-              <br />
-              <span className="text-white/60">Almost none maintain control as they scale.</span>
-            </p>
-            <p className="mt-6 text-[#F1E2B6]">We solve that.</p>
-          </SectionBlock>
-
-          <SectionBlock>
-            <div className="text-center">
-              <button
-                type="button"
-                onClick={openDrawer}
-                className="inline-flex rounded-xl bg-[#BC9A2D] px-7 py-3 text-[11px] font-medium uppercase tracking-[0.2em] text-black transition hover:brightness-105"
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={DRAG_SYMPTOMS[activeSymptom].title}
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.26, ease: "easeOut" }}
+                className="mt-4 rounded-2xl bg-[linear-gradient(160deg,rgba(11,15,30,0.95),rgba(13,13,20,0.95))] p-5 shadow-[inset_0_0_0_1px_rgba(129,140,248,0.3)] sm:p-6"
               >
-                Apply for Access
-              </button>
-              <p className="mt-4 text-sm text-white/60">We review every request.</p>
-            </div>
-          </SectionBlock>
-        </div>
-      </div>
-
-      <AnimatePresence>
-        {isDrawerOpen && (
-          <>
-            <motion.button
-              type="button"
-              onClick={() => setIsDrawerOpen(false)}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px]"
-              aria-label="Close access drawer"
-            />
-            <motion.aside
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
-              transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
-              className="fixed right-0 top-0 z-50 h-full w-full max-w-[680px] overflow-y-auto border-l border-white/10 bg-[#1F1F1F] p-6 sm:p-8"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.24em] text-[#D7C48A]">Access Qualification</p>
-                  <h2 className="mt-3 text-3xl font-semibold leading-tight tracking-tight text-white">
-                    Tell us about your business.
-                  </h2>
-                  <p className="mt-3 max-w-[520px] text-sm leading-7 text-white/68">
-                    We use this intake to pre-vet fit, urgency, implementation readiness, and compliance constraints.
-                  </p>
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-[#A5B4FC]">Live Signal Readout</p>
+                  <span className="rounded-full bg-[#312E81]/55 px-3 py-1 text-[10px] uppercase tracking-[0.14em] text-[#C7D2FE]">
+                    {DRAG_SYMPTOMS[activeSymptom].pressure}
+                  </span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setIsDrawerOpen(false)}
-                  className="rounded-lg border border-white/15 px-3 py-2 text-xs uppercase tracking-[0.2em] text-white/72 transition hover:bg-white/[0.05]"
-                >
-                  Close
-                </button>
-              </div>
+                <h3 className="mt-3 text-2xl font-semibold leading-tight text-white">{DRAG_SYMPTOMS[activeSymptom].title}</h3>
+                <p className="mt-4 text-sm leading-7 text-white/78">{DRAG_SYMPTOMS[activeSymptom].signal}</p>
+                <p className="mt-2 rounded-lg bg-[#0F172A]/58 px-3 py-2 text-sm leading-7 text-[#C7D2FE]">
+                  Leak pattern: {DRAG_SYMPTOMS[activeSymptom].leak}
+                </p>
+                <p className="mt-2 text-sm leading-7 text-[#93C5FD]">Impact: {DRAG_SYMPTOMS[activeSymptom].outcome}</p>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </motion.section>
 
-              <form onSubmit={handleAccessSubmit} className="mt-8 space-y-6">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="space-y-2">
-                    <span className="text-[11px] uppercase tracking-[0.2em] text-white/46">Full Name *</span>
-                    <input name="fullName" value={accessForm.fullName} onChange={handleFieldChange} className="w-full rounded-xl border border-white/12 bg-black/25 px-3 py-2.5 text-sm text-white outline-none focus:border-[#BC9A2D]/55" />
-                  </label>
-                  <label className="space-y-2">
-                    <span className="text-[11px] uppercase tracking-[0.2em] text-white/46">Work Email *</span>
-                    <input name="workEmail" type="email" value={accessForm.workEmail} onChange={handleFieldChange} className="w-full rounded-xl border border-white/12 bg-black/25 px-3 py-2.5 text-sm text-white outline-none focus:border-[#BC9A2D]/55" />
-                  </label>
-                  <label className="space-y-2">
-                    <span className="text-[11px] uppercase tracking-[0.2em] text-white/46">Role Title *</span>
-                    <input name="roleTitle" value={accessForm.roleTitle} onChange={handleFieldChange} className="w-full rounded-xl border border-white/12 bg-black/25 px-3 py-2.5 text-sm text-white outline-none focus:border-[#BC9A2D]/55" />
-                  </label>
-                  <label className="space-y-2">
-                    <span className="text-[11px] uppercase tracking-[0.2em] text-white/46">Decision Authority *</span>
-                    <input name="decisionAuthority" value={accessForm.decisionAuthority} onChange={handleFieldChange} placeholder="Final decision maker, recommender, or evaluator" className="w-full rounded-xl border border-white/12 bg-black/25 px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/28 focus:border-[#BC9A2D]/55" />
-                  </label>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="space-y-2">
-                    <span className="text-[11px] uppercase tracking-[0.2em] text-white/46">Company Name *</span>
-                    <input name="companyName" value={accessForm.companyName} onChange={handleFieldChange} className="w-full rounded-xl border border-white/12 bg-black/25 px-3 py-2.5 text-sm text-white outline-none focus:border-[#BC9A2D]/55" />
-                  </label>
-                  <label className="space-y-2">
-                    <span className="text-[11px] uppercase tracking-[0.2em] text-white/46">Company Website</span>
-                    <input name="companyWebsite" value={accessForm.companyWebsite} onChange={handleFieldChange} placeholder="https://example.com" className="w-full rounded-xl border border-white/12 bg-black/25 px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/28 focus:border-[#BC9A2D]/55" />
-                  </label>
-                  <label className="space-y-2">
-                    <span className="text-[11px] uppercase tracking-[0.2em] text-white/46">Industry *</span>
-                    <input name="industry" value={accessForm.industry} onChange={handleFieldChange} placeholder="Fintech, Healthtech, Legal SaaS..." className="w-full rounded-xl border border-white/12 bg-black/25 px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/28 focus:border-[#BC9A2D]/55" />
-                  </label>
-                  <label className="space-y-2">
-                    <span className="text-[11px] uppercase tracking-[0.2em] text-white/46">Company Size *</span>
-                    <select name="companySizeBand" value={accessForm.companySizeBand} onChange={handleFieldChange} className="w-full rounded-xl border border-white/12 bg-black/25 px-3 py-2.5 text-sm text-white outline-none focus:border-[#BC9A2D]/55">
-                      <option value="">Select</option>
-                      {COMPANY_SIZE_OPTIONS.map((option) => (
-                        <option key={option} value={option}>{option}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="space-y-2">
-                    <span className="text-[11px] uppercase tracking-[0.2em] text-white/46">Annual Revenue</span>
-                    <select name="annualRevenueBand" value={accessForm.annualRevenueBand} onChange={handleFieldChange} className="w-full rounded-xl border border-white/12 bg-black/25 px-3 py-2.5 text-sm text-white outline-none focus:border-[#BC9A2D]/55">
-                      <option value="">Select</option>
-                      {REVENUE_BAND_OPTIONS.map((option) => (
-                        <option key={option} value={option}>{option}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="space-y-2">
-                    <span className="text-[11px] uppercase tracking-[0.2em] text-white/46">Implementation Budget *</span>
-                    <select name="implementationBudgetBand" value={accessForm.implementationBudgetBand} onChange={handleFieldChange} className="w-full rounded-xl border border-white/12 bg-black/25 px-3 py-2.5 text-sm text-white outline-none focus:border-[#BC9A2D]/55">
-                      <option value="">Select</option>
-                      {BUDGET_BAND_OPTIONS.map((option) => (
-                        <option key={option} value={option}>{option}</option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-
-                <div className="space-y-2">
-                  <span className="text-[11px] uppercase tracking-[0.2em] text-white/46">Urgency Window *</span>
-                  <select name="urgencyWindow" value={accessForm.urgencyWindow} onChange={handleFieldChange} className="w-full rounded-xl border border-white/12 bg-black/25 px-3 py-2.5 text-sm text-white outline-none focus:border-[#BC9A2D]/55">
-                    <option value="">Select</option>
-                    {URGENCY_OPTIONS.map((option) => (
-                      <option key={option} value={option}>{option}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-2">
-                  <span className="text-[11px] uppercase tracking-[0.2em] text-white/46">Compliance Scope</span>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {COMPLIANCE_OPTIONS.map((item) => {
-                      const active = accessForm.complianceScope.includes(item);
-                      return (
-                        <button
-                          key={item}
-                          type="button"
-                          onClick={() => toggleCompliance(item)}
-                          className={`rounded-lg border px-3 py-2 text-left text-sm transition ${
-                            active
-                              ? "border-[#BC9A2D]/55 bg-[#BC9A2D]/12 text-[#F1E2B6]"
-                              : "border-white/12 bg-black/20 text-white/72 hover:bg-white/[0.04]"
-                          }`}
-                        >
-                          {item}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <label className="space-y-2">
-                  <span className="text-[11px] uppercase tracking-[0.2em] text-white/46">Primary Use Case *</span>
-                  <textarea name="primaryUseCase" value={accessForm.primaryUseCase} onChange={handleFieldChange} rows={3} placeholder="What outcome do you need this system to own?" className="w-full rounded-xl border border-white/12 bg-black/25 px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/28 focus:border-[#BC9A2D]/55" />
-                </label>
-
-                <label className="space-y-2">
-                  <span className="text-[11px] uppercase tracking-[0.2em] text-white/46">Current Systems</span>
-                  <textarea name="currentSystems" value={accessForm.currentSystems} onChange={handleFieldChange} rows={2} placeholder="Current stack (CRM, ticketing, billing, internal tooling)" className="w-full rounded-xl border border-white/12 bg-black/25 px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/28 focus:border-[#BC9A2D]/55" />
-                </label>
-
-                <label className="space-y-2">
-                  <span className="text-[11px] uppercase tracking-[0.2em] text-white/46">Current Execution Breakdown *</span>
-                  <textarea name="criticalBreakdown" value={accessForm.criticalBreakdown} onChange={handleFieldChange} rows={3} placeholder="Where are decisions getting lost or delayed today?" className="w-full rounded-xl border border-white/12 bg-black/25 px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/28 focus:border-[#BC9A2D]/55" />
-                </label>
-
-                <label className="space-y-2">
-                  <span className="text-[11px] uppercase tracking-[0.2em] text-white/46">Additional Notes</span>
-                  <textarea name="notes" value={accessForm.notes} onChange={handleFieldChange} rows={2} className="w-full rounded-xl border border-white/12 bg-black/25 px-3 py-2.5 text-sm text-white outline-none focus:border-[#BC9A2D]/55" />
-                </label>
-
-                {submitState !== "idle" && (
-                  <div
-                    className={`rounded-lg border px-3 py-2 text-sm ${
-                      submitState === "success"
-                        ? "border-emerald-300/35 bg-emerald-300/10 text-emerald-200"
-                        : "border-red-300/35 bg-red-300/10 text-red-200"
-                    }`}
-                  >
-                    {submitMessage}
+        <motion.section className="pt-32 sm:pt-36 lg:pt-40" {...SECTION_REVEAL}>
+          <h2 className="max-w-[1000px] text-left text-[clamp(2rem,4vw,4rem)] font-bold leading-tight tracking-[-0.02em]">
+            We install the operating layer your tools were supposed to give you.
+          </h2>
+          <p className="mt-4 max-w-[920px] text-left text-lg leading-8 text-white/82">
+            From founder dependency and chaos to control, velocity, and peace of mind.
+          </p>
+          <motion.button
+            type="button"
+            onClick={() => setShowTransform((prev) => !prev)}
+            className="mt-4 w-full rounded-full border border-white/25 px-4 py-2 text-center text-[10px] uppercase tracking-[0.12em] text-white/78 transition hover:bg-white/[0.08] sm:w-auto sm:text-[11px] sm:tracking-[0.18em]"
+            whileHover={{ y: -1.5 }}
+            whileTap={{ scale: 0.99 }}
+          >
+            {showTransform ? "Hide Before → After" : "Show Before → After Transformations"}
+          </motion.button>
+          <div className="mt-8 grid gap-4 md:grid-cols-3">
+            {OPERATING_LAYER.map((item, index) => (
+              <motion.button
+                key={item.title}
+                type="button"
+                onClick={() => setActiveLayerCard(index)}
+                className={`group rounded-xl bg-black/35 p-5 text-left shadow-[0_0_0_1px_rgba(255,255,255,0.1)] transition hover:-translate-y-[2px] hover:shadow-[0_0_0_1px_rgba(168,85,247,0.45),0_16px_32px_rgba(99,102,241,0.25)] ${
+                  activeLayerCard === index ? "shadow-[0_0_0_1px_rgba(168,85,247,0.55),0_18px_34px_rgba(99,102,241,0.28)]" : ""
+                }`}
+                whileHover={{ y: -3, scale: 1.01 }}
+                whileTap={{ scale: 0.995 }}
+              >
+                <p className="text-2xl">✦</p>
+                <p className="mt-3 text-lg font-semibold">{item.title}</p>
+                <p className="mt-2 text-sm leading-7 text-white/75">{item.body}</p>
+                {showTransform && (
+                  <div className="mt-4 space-y-2 rounded-lg bg-black/35 p-3 text-xs text-white/78">
+                    <p>
+                      <span className="font-semibold text-rose-200">Before:</span> {item.before}
+                    </p>
+                    <p>
+                      <span className="font-semibold text-emerald-200">After:</span> {item.after}
+                    </p>
                   </div>
                 )}
+              </motion.button>
+            ))}
+          </div>
+        </motion.section>
 
-                <div className="flex items-center justify-between gap-3 border-t border-white/10 pt-4">
-                  <p className="text-xs text-white/52">Fields marked * are required for pre-vetting.</p>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="rounded-xl bg-[#BC9A2D] px-6 py-3 text-[11px] font-medium uppercase tracking-[0.2em] text-black transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
+        <motion.section className="pt-32 sm:pt-36 lg:pt-40" {...SECTION_REVEAL}>
+          <div className="rounded-[30px] bg-[linear-gradient(160deg,rgba(99,102,241,0.18),rgba(168,85,247,0.08),rgba(10,10,10,0.92))] p-5 shadow-[0_30px_90px_rgba(0,0,0,0.55)] sm:p-8">
+            <h2 className="text-left text-[clamp(1.9rem,3.8vw,3.4rem)] font-bold leading-tight">
+              Real Build Spotlight: REC Ops Control Surface
+            </h2>
+            <p className="mt-3 text-left text-base leading-7 text-white/78">
+              Custom production ops system built for a real estate media studio.
+            </p>
+            <div className="mt-6 grid grid-cols-1 gap-2 sm:flex sm:gap-2 sm:overflow-x-auto">
+              {REC_FEATURES.map((item, index) => {
+                const active = activeRecFeature === index;
+                return (
+                  <motion.button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setActiveRecFeature(index)}
+                    className={`w-full rounded-lg px-4 py-2 text-center text-[10px] uppercase tracking-[0.12em] transition sm:w-auto sm:whitespace-nowrap sm:text-xs sm:tracking-[0.16em] ${
+                      active
+                        ? "bg-[#FACC15] text-black"
+                        : "bg-black/35 text-white/75 shadow-[0_0_0_1px_rgba(255,255,255,0.12)]"
+                    }`}
+                    whileHover={{ y: -1.5 }}
+                    whileTap={{ scale: 0.99 }}
                   >
-                    {isSubmitting ? "Submitting..." : "Submit Request"}
-                  </button>
+                    {item.label}
+                  </motion.button>
+                );
+              })}
+            </div>
+            <div className="mt-5 grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={REC_FEATURES[activeRecFeature].id}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.28 }}
+                  className="rounded-2xl bg-black/45 p-2 shadow-[0_0_0_1px_rgba(255,255,255,0.12)]"
+                >
+                  <img src={REC_FEATURES[activeRecFeature].image} alt={REC_FEATURES[activeRecFeature].label} className="w-full rounded-xl object-cover" />
+                </motion.div>
+              </AnimatePresence>
+              <div className="space-y-3">
+                <div className="rounded-xl bg-black/40 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.12)]">
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-[#FACC15]">BEFORE</p>
+                  <p className="mt-2 text-sm leading-6 text-white/76">{REC_FEATURES[activeRecFeature].before}</p>
                 </div>
-              </form>
-            </motion.aside>
-          </>
-        )}
-      </AnimatePresence>
+                <div className="rounded-xl bg-black/40 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.12)]">
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-[#FACC15]">INSTALLED</p>
+                  <p className="mt-2 text-sm leading-6 text-white/76">{REC_FEATURES[activeRecFeature].installed}</p>
+                </div>
+                <div className="rounded-xl bg-black/40 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.12)]">
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-[#FACC15]">OUTCOME</p>
+                  <ul className="mt-2 space-y-1">
+                    {REC_FEATURES[activeRecFeature].outcomes.map((outcome) => (
+                      <li key={outcome} className="flex items-start gap-2 text-sm text-white/76">
+                        <span className="mt-[2px] text-emerald-400">✓</span>
+                        <span>{outcome}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.section>
+
+        <motion.section id="vessa" className="pt-32 sm:pt-36 lg:pt-40" {...SECTION_REVEAL}>
+          <h2 className="text-left text-[clamp(1.9rem,3.8vw,3.2rem)] font-bold leading-tight">
+            Vessa Suite: Launching Late Spring 2026
+          </h2>
+          <p className="mt-3 max-w-[1000px] text-base leading-7 text-white/78">
+            Vessa is an AI execution layer for operators. Connect email, Slack, AI notetakers, and your PM stack.
+            Vessa pulls in signal, flags high-impact work, executes what it can, then sends you the final decision.
+          </p>
+          <div className="mt-7 grid gap-4 md:grid-cols-3">
+            {VESSA_CARDS.map((item) => (
+              <motion.div
+                key={item.title}
+                className="rounded-xl bg-black/35 p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.12)]"
+                whileHover={{ y: -4, scale: 1.01 }}
+                transition={{ type: "spring", stiffness: 260, damping: 22 }}
+              >
+                <p className="text-lg font-semibold">{item.title}</p>
+                <p className="mt-2 text-sm leading-7 text-white/75">{item.body}</p>
+              </motion.div>
+            ))}
+          </div>
+          <motion.div className="mt-6" whileHover={{ y: -1.5 }} whileTap={{ scale: 0.99 }}>
+            <Link
+              href="/vessa"
+              className="inline-flex rounded-xl bg-[#FACC15] px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-black transition hover:brightness-105"
+            >
+              See Vessa
+            </Link>
+          </motion.div>
+        </motion.section>
+
+        <motion.section className="pt-32 sm:pt-36 lg:pt-40" {...SECTION_REVEAL}>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="rounded-xl bg-black/35 p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.12),inset_2px_0_0_rgba(74,222,128,0.45)]">
+              <p className="text-[11px] uppercase tracking-[0.22em] text-[#FACC15]">GOOD FIT</p>
+              <p className="mt-3 text-sm leading-7 text-white/78">
+                Founder-led teams with recurring bottlenecks and high-value workflows that need tighter control.
+              </p>
+            </div>
+            <div className="rounded-xl bg-black/35 p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.12),inset_2px_0_0_rgba(251,113,133,0.45)]">
+              <p className="text-[11px] uppercase tracking-[0.22em] text-[#FACC15]">NOT A FIT</p>
+              <p className="mt-3 text-sm leading-7 text-white/78">
+                Teams wanting quick hacks, one-off automations, or advisory without implementation ownership.
+              </p>
+            </div>
+          </div>
+        </motion.section>
+
+        <motion.section className="pb-12 pt-32 sm:pt-36 lg:pt-40" {...SECTION_REVEAL}>
+          <div className="rounded-[30px] bg-[linear-gradient(145deg,rgba(250,204,21,0.18),rgba(16,16,18,0.92))] p-6 shadow-[0_32px_90px_rgba(0,0,0,0.55)] sm:p-10">
+            <h2 className="max-w-[920px] text-left text-[clamp(2rem,4.4vw,4rem)] font-bold leading-tight tracking-[-0.02em]">
+              Stop being the operating system of your business.
+            </h2>
+            <p className="mt-4 max-w-[980px] text-base leading-8 text-white/82">
+              If execution still depends on you translating, routing, approving, and remembering everything, your
+              business is not scaling. It is borrowing your nervous system.
+            </p>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <motion.div whileHover={{ y: -1.5 }} whileTap={{ scale: 0.99 }}>
+                <Link
+                href={QUALIFIER_URL}
+                className="block w-full rounded-xl bg-[#FACC15] px-5 py-3.5 text-center text-[10px] font-semibold uppercase tracking-[0.12em] text-black transition hover:brightness-105 sm:w-auto sm:px-7 sm:text-[11px] sm:tracking-[0.2em]"
+              >
+                Book an OPS Drag Audit
+              </Link>
+              </motion.div>
+              <motion.div whileHover={{ y: -1.5 }} whileTap={{ scale: 0.99 }}>
+                <Link
+                href={WAITLIST_URL}
+                className="block w-full rounded-xl border border-white/35 px-5 py-3.5 text-center text-[10px] font-semibold uppercase tracking-[0.12em] text-white transition hover:bg-white/[0.08] sm:w-auto sm:px-7 sm:text-[11px] sm:tracking-[0.2em]"
+              >
+                Join Vessa Waitlist
+              </Link>
+              </motion.div>
+            </div>
+          </div>
+        </motion.section>
+      </div>
+
+      {showMobileBar && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[#111115]/95 p-3 backdrop-blur lg:hidden">
+          <a
+            href="#diagnosis"
+            className="block w-full rounded-lg bg-[#FACC15] px-4 py-3 text-center text-[10px] font-semibold uppercase tracking-[0.12em] text-black sm:text-[11px] sm:tracking-[0.2em]"
+          >
+            Start the 30-Second Pre-Qualifier
+          </a>
+        </div>
+      )}
     </main>
   );
 }

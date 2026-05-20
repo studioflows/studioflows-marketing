@@ -1,24 +1,24 @@
 import CustomOpsHubClient from "./CustomOpsHubClient";
 
 export const metadata = {
-  title: "Custom Ops Hub Consulting for Growing Businesses | StudioFlows",
+  title: "OPS Drag Audit Qualifier | StudioFlows",
   description:
-    "StudioFlows designs custom ops hub systems for businesses with operational bottlenecks. Complete a guided qualification experience and book a strategic call.",
+    "Complete the 90-second StudioFlows qualifier to pre-vet fit, urgency, and implementation readiness before OPS Drag Audit slots are offered.",
   alternates: {
     canonical: "/services/custom-ops-hub",
   },
   openGraph: {
-    title: "Custom Ops Hub Consulting for Growing Businesses | StudioFlows",
+    title: "OPS Drag Audit Qualifier | StudioFlows",
     description:
-      "A guided StudioFlows qualification experience for businesses that need tighter execution control, clearer workflows, and faster operational outcomes.",
+      "Pre-qualify for a StudioFlows OPS Drag Audit with a 90-second challenger-style assessment.",
     url: "/services/custom-ops-hub",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Custom Ops Hub Consulting for Growing Businesses | StudioFlows",
+    title: "OPS Drag Audit Qualifier | StudioFlows",
     description:
-      "Take the StudioFlows qualification experience and map your custom operations hub path.",
+      "Take the StudioFlows qualifier and see if your team is ready for an OPS Drag Audit slot.",
   },
 };
 
