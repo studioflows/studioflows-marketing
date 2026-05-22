@@ -100,11 +100,37 @@ const DRAG_SYMPTOMS = [
 
 const REC_FEATURES = [
   {
+    id: "dashboard",
+    label: "OPERATIONS DASHBOARD",
+    image: "/case-studies/rec/operations-dashboard.png",
+    before: "Confirmations, exceptions, and today's schedule lived in separate threads.",
+    installed: "One operations dashboard with pending confirmations, dispatch, live schedule, and exception queue.",
+    outcomes: [
+      "Faster morning triage",
+      "Clearer exception handling",
+      "Less founder firefighting",
+      "Production days locked earlier",
+    ],
+  },
+  {
+    id: "calendar",
+    label: "CALENDAR",
+    image: "/case-studies/rec/calendar.png",
+    before: "Job status and location context were hard to scan across the month.",
+    installed: "Month view with status-coded jobs, quick add, and searchable production calendar.",
+    outcomes: [
+      "Faster scheduling decisions",
+      "Cleaner status visibility",
+      "Fewer double-book risks",
+      "Better month-level planning",
+    ],
+  },
+  {
     id: "staff",
-    label: "STAFF ORCHESTRATION",
+    label: "STAFF SCHEDULE",
     image: "/case-studies/rec/staff-schedule.png",
-    before: "Manual coordination chaos.",
-    installed: "One clean command surface for team lanes, jobs, and assignments.",
+    before: "Crew coverage gaps surfaced late, often after travel windows tightened.",
+    installed: "Live staffing matrix with unassigned lane, crew filters, and week-level job placement.",
     outcomes: [
       "Faster dispatch decisions",
       "Cleaner team assignments",
@@ -115,9 +141,9 @@ const REC_FEATURES = [
   {
     id: "workspace",
     label: "JOB WORKSPACE",
-    image: "/case-studies/rec/calendar-workspace.png",
-    before: "Rescheduling and assignment changes were fragmented and slow.",
-    installed: "Integrated job workspace with schedule control, status updates, and ownership clarity.",
+    image: "/case-studies/rec/job-workspace.png",
+    before: "Rescheduling, weather checks, and assignment changes were fragmented and slow.",
+    installed: "Side-panel job workspace with status actions, weather context, and teammate assignment.",
     outcomes: [
       "Faster job rerouting",
       "Fewer assignment misses",
