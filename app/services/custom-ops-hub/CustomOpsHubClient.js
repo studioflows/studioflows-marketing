@@ -91,9 +91,8 @@ const QUIZ_SECTIONS = [
   },
   {
     id: "breakdown",
-    title: "Breakdown patterns drive design.",
-    challenger:
-      "Challenger teams do not ask what is happening. They ask what keeps happening and why.",
+    title: "What breaks on repeat",
+    challenger: "Choose the pattern you see most weeks, not a one-off fire drill.",
     fields: [
       {
         name: "frequentBreakdown",
@@ -105,10 +104,13 @@ const QUIZ_SECTIONS = [
       },
       {
         name: "frequentBreakdownDetail",
+        sectionTitle: "What it costs when it breaks again",
+        challenger:
+          "Be specific about the business hit: delayed revenue, rework, client trust, margin, or leadership time stuck in triage.",
         label: "What is the business consequence when this breaks?",
         type: "textarea",
         required: true,
-        placeholder: "Example: delayed revenue, client churn risk, margin loss, founder bottleneck.",
+        placeholder: "Example: we lose 2-3 days per month to rework, or deals stall until I personally unblock them.",
       },
     ],
   },
@@ -379,8 +381,8 @@ export default function CustomOpsHubClient() {
         section.fields.map((field) => ({
           ...field,
           questionId: `${section.id}-${field.name}`,
-          sectionTitle: section.title,
-          sectionChallenger: section.challenger,
+          sectionTitle: field.sectionTitle ?? section.title,
+          sectionChallenger: field.challenger ?? section.challenger,
         }))
       ),
     []
