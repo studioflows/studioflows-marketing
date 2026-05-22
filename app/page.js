@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
+import RecCaseStudySpotlight from "@/components/RecCaseStudySpotlight";
+
 const QUALIFIER_URL = "#diagnosis";
 const QUALIFIED_AUDIT_URL = "/services/custom-ops-hub";
 const WAITLIST_URL = "/vessa";
@@ -95,61 +97,6 @@ const DRAG_SYMPTOMS = [
     leak: "Deadlines slip, rework multiplies, and accountability gets blurry.",
     outcome: "Chaos hides in transitions and appears when clients are waiting.",
     pressure: "Revenue Pressure: Medium",
-  },
-];
-
-const REC_FEATURES = [
-  {
-    id: "dashboard",
-    label: "OPERATIONS DASHBOARD",
-    image: "/case-studies/rec/operations-dashboard.png",
-    before: "Confirmations, exceptions, and today's schedule lived in separate threads.",
-    installed: "One operations dashboard with pending confirmations, dispatch, live schedule, and exception queue.",
-    outcomes: [
-      "Faster morning triage",
-      "Clearer exception handling",
-      "Less founder firefighting",
-      "Production days locked earlier",
-    ],
-  },
-  {
-    id: "calendar",
-    label: "CALENDAR",
-    image: "/case-studies/rec/calendar.png",
-    before: "Job status and location context were hard to scan across the month.",
-    installed: "Month view with status-coded jobs, quick add, and searchable production calendar.",
-    outcomes: [
-      "Faster scheduling decisions",
-      "Cleaner status visibility",
-      "Fewer double-book risks",
-      "Better month-level planning",
-    ],
-  },
-  {
-    id: "staff",
-    label: "STAFF SCHEDULE",
-    image: "/case-studies/rec/staff-schedule.png",
-    before: "Crew coverage gaps surfaced late, often after travel windows tightened.",
-    installed: "Live staffing matrix with unassigned lane, crew filters, and week-level job placement.",
-    outcomes: [
-      "Faster dispatch decisions",
-      "Cleaner team assignments",
-      "Reduced scheduling drift",
-      "Founder time freed",
-    ],
-  },
-  {
-    id: "workspace",
-    label: "JOB WORKSPACE",
-    image: "/case-studies/rec/job-workspace.png",
-    before: "Rescheduling, weather checks, and assignment changes were fragmented and slow.",
-    installed: "Side-panel job workspace with status actions, weather context, and teammate assignment.",
-    outcomes: [
-      "Faster job rerouting",
-      "Fewer assignment misses",
-      "Cleaner handoffs",
-      "Less founder intervention",
-    ],
   },
 ];
 
@@ -357,7 +304,6 @@ function DiagnosisQuiz() {
 }
 
 export default function HomePage() {
-  const [activeRecFeature, setActiveRecFeature] = useState(0);
   const [activeSymptom, setActiveSymptom] = useState(0);
   const [activeLayerCard, setActiveLayerCard] = useState(0);
   const [showTransform, setShowTransform] = useState(true);
@@ -629,72 +575,7 @@ export default function HomePage() {
           </div>
         </motion.section>
 
-        <motion.section className="pt-32 sm:pt-36 lg:pt-40" {...SECTION_REVEAL}>
-          <div className="rounded-[30px] bg-[linear-gradient(160deg,rgba(99,102,241,0.18),rgba(168,85,247,0.08),rgba(10,10,10,0.92))] p-5 shadow-[0_30px_90px_rgba(0,0,0,0.55)] sm:p-8">
-            <h2 className="text-left text-[clamp(1.9rem,3.8vw,3.4rem)] font-bold leading-tight">
-              Real Build Spotlight: REC Ops Control Surface
-            </h2>
-            <p className="mt-3 text-left text-base leading-7 text-white/78">
-              Custom production ops system built for a real estate media studio.
-            </p>
-            <div className="mt-6 grid grid-cols-1 gap-2 sm:flex sm:gap-2 sm:overflow-x-auto">
-              {REC_FEATURES.map((item, index) => {
-                const active = activeRecFeature === index;
-                return (
-                  <motion.button
-                    key={item.id}
-                    type="button"
-                    onClick={() => setActiveRecFeature(index)}
-                    className={`w-full rounded-lg px-4 py-2 text-center text-[10px] uppercase tracking-[0.12em] transition sm:w-auto sm:whitespace-nowrap sm:text-xs sm:tracking-[0.16em] ${
-                      active
-                        ? "bg-[#FACC15] text-black"
-                        : "bg-black/35 text-white/75 shadow-[0_0_0_1px_rgba(255,255,255,0.12)]"
-                    }`}
-                    whileHover={{ y: -1.5 }}
-                    whileTap={{ scale: 0.99 }}
-                  >
-                    {item.label}
-                  </motion.button>
-                );
-              })}
-            </div>
-            <div className="mt-5 grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={REC_FEATURES[activeRecFeature].id}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.28 }}
-                  className="rounded-2xl bg-black/45 p-2 shadow-[0_0_0_1px_rgba(255,255,255,0.12)]"
-                >
-                  <img src={REC_FEATURES[activeRecFeature].image} alt={REC_FEATURES[activeRecFeature].label} className="w-full rounded-xl object-cover" />
-                </motion.div>
-              </AnimatePresence>
-              <div className="space-y-3">
-                <div className="rounded-xl bg-black/40 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.12)]">
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-[#FACC15]">BEFORE</p>
-                  <p className="mt-2 text-sm leading-6 text-white/76">{REC_FEATURES[activeRecFeature].before}</p>
-                </div>
-                <div className="rounded-xl bg-black/40 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.12)]">
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-[#FACC15]">INSTALLED</p>
-                  <p className="mt-2 text-sm leading-6 text-white/76">{REC_FEATURES[activeRecFeature].installed}</p>
-                </div>
-                <div className="rounded-xl bg-black/40 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.12)]">
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-[#FACC15]">OUTCOME</p>
-                  <ul className="mt-2 space-y-1">
-                    {REC_FEATURES[activeRecFeature].outcomes.map((outcome) => (
-                      <li key={outcome} className="flex items-start gap-2 text-sm text-white/76">
-                        <span className="mt-[2px] text-emerald-400">✓</span>
-                        <span>{outcome}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-        </motion.section>
+        <RecCaseStudySpotlight />
 
         <motion.section id="vessa" className="pt-32 sm:pt-36 lg:pt-40" {...SECTION_REVEAL}>
           <h2 className="text-left text-[clamp(1.9rem,3.8vw,3.2rem)] font-bold leading-tight">
