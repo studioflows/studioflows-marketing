@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
-import { REC_FEATURES, REC_FIT_BUSINESSES } from "@/lib/rec-case-study";
+import { REC_FEATURES } from "@/lib/rec-case-study";
+import RecFitExplorer from "@/components/RecFitExplorer";
 import RecScreenshotLightbox, { RecScreenshotExpandHint } from "@/components/RecScreenshotLightbox";
 
 const SECTION_REVEAL = {
@@ -33,27 +34,7 @@ export default function RecCaseStudySpotlight() {
           confirmations, and day-of exceptions.
         </p>
 
-        <div className="mt-8">
-          <p className="text-[10px] uppercase tracking-[0.22em] text-[#C4B5FD]">Perfect for teams like yours</p>
-          <div className="mt-4 flex gap-3 overflow-x-auto pb-2 sm:grid sm:grid-cols-2 sm:overflow-visible lg:grid-cols-3">
-            {REC_FIT_BUSINESSES.map((group) => (
-              <div
-                key={group.category}
-                className="min-w-[260px] shrink-0 rounded-xl bg-black/40 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.1)] sm:min-w-0"
-              >
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#FACC15]">{group.category}</p>
-                <ul className="mt-3 space-y-3">
-                  {group.items.map((item) => (
-                    <li key={item.name}>
-                      <p className="text-sm font-semibold text-white/92">{item.name}</p>
-                      <p className="mt-1 text-xs leading-5 text-white/68">{item.pain}</p>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </div>
+        <RecFitExplorer />
 
         <div className="mt-8">
           <p className="text-[10px] uppercase tracking-[0.22em] text-[#C4B5FD]">Test drive this week</p>
