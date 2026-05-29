@@ -4,19 +4,28 @@
   "scripts": {
     "build": "next build",
     "start": "next start",
-    "dev": "next dev"
+    "dev": "next dev",
+    "dev:fresh": "node scripts/dev-fresh.mjs"
   },
   "dependencies": {
+    "@radix-ui/react-progress": "^1.1.8",
     "@radix-ui/react-slot": "^1.2.4",
+    "@radix-ui/react-tabs": "^1.1.13",
     "@supabase/supabase-js": "^2.100.0",
+    "@types/node": "^25.9.1",
+    "@types/react": "^19.2.15",
     "clsx": "^2.1.1",
     "framer-motion": "^12.38.0",
     "lenis": "^1.3.20",
+    "lottie-react": "^2.4.1",
+    "lucide-react": "^1.16.0",
     "next": "^14.2.35",
+    "next-themes": "^0.4.6",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "react-use": "^17.6.0",
-    "tailwind-merge": "^3.5.0"
+    "tailwind-merge": "^3.5.0",
+    "typescript": "^6.0.3"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.27",

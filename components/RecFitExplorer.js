@@ -65,6 +65,15 @@ export default function RecFitExplorer() {
     setItemIndex((prev) => (prev + 1) % category.items.length);
   }
 
+  function seeInRec() {
+    const tabId = item.recTabId || "workspace";
+    const url = new URL(window.location.href);
+    url.searchParams.set("rec", tabId);
+    window.history.pushState({}, "", url.toString());
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    document.getElementById("rec-spotlight")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   return (
     <div className="mt-8">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -154,6 +163,15 @@ export default function RecFitExplorer() {
           <p className="mt-4 text-xs text-white/50">Same ops shape REC installed. Your labels change. The control layer does not.</p>
 
           <div className="mt-6 flex flex-wrap gap-2">
+            <motion.button
+              type="button"
+              onClick={seeInRec}
+              className="inline-flex items-center gap-2 rounded-full bg-[#FACC15] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-black transition hover:brightness-105"
+              whileHover={{ y: -1 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              See in REC
+            </motion.button>
             <motion.button
               type="button"
               onClick={shuffleLane}

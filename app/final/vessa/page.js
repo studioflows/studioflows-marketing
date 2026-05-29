@@ -7,82 +7,88 @@ const SCENARIOS = [
   {
     id: "client-delivery-risk",
     label: "Client delivery risk",
+    lane: "action",
+    laneLabel: "Lane 1: Action approval",
     signal:
       "Two client projects are within 24 hours of deadline. One key asset is still pending review and the owner is offline.",
-    recommendation:
-      "Reassign review ownership, send a revised client update, and lock a 2-hour QA checkpoint before delivery.",
+    vessaMove:
+      "Vessa creates tasks to reassign review ownership, send a team status sync, and open a time-boxed QA checkpoint, then routes those actions for your approval. No deliverable artifact.",
     outcomes: {
       approve: [
-        "Vessa reassigns review to the fallback owner.",
-        "Vessa sends the approved client status update.",
-        "Vessa opens a time-boxed QA checkpoint and tracks completion."
+        "You approve the reassignment action. Vessa updates ownership in Workstream.",
+        "You approve the comms action. Vessa sends the team status sync.",
+        "You approve the checkpoint action. Vessa creates the QA task and assigns it."
       ],
       adjust: [
-        "Vessa keeps original owner but escalates to a manager.",
-        "Vessa prepares a softer client update for your approval.",
-        "Vessa schedules a shorter QA pass with manual sign-off."
+        "You revise the reassignment target before approval.",
+        "Vessa holds the comms action and escalates to a manager instead.",
+        "Vessa shortens the QA window and resubmits the action set."
       ],
       hold: [
-        "No reassignment occurs and the deadline risk remains open.",
-        "Vessa logs the risk and requests a manual owner decision.",
-        "Execution stays paused until leadership decides."
+        "No actions run. The deadline risk stays open.",
+        "Vessa logs the risk and keeps the action queue paused.",
+        "Execution stays blocked until leadership decides."
       ]
     }
   },
   {
-    id: "invoicing-bottleneck",
-    label: "Invoicing bottleneck",
+    id: "delivery-package-review",
+    label: "Delivery package review",
+    lane: "deliverable",
+    laneLabel: "Lane 2: Deliverable review",
     signal:
-      "12 invoices are pending, 5 are blocked by missing delivery confirmation, and cash collection is slowing this week.",
-    recommendation:
-      "Bundle completion evidence, route approvals by account priority, and release invoices in two controlled waves.",
+      "A client milestone is due tomorrow. The delivery package draft is incomplete and no one has pulled the final asset summary together.",
+    vessaMove:
+      "Vessa executes the work, builds the delivery package artifact, and sends it to review. You approve the deliverable, then she delivers it.",
     outcomes: {
       approve: [
-        "Vessa compiles proof-of-delivery artifacts per account.",
-        "Vessa routes high-priority approvals first.",
-        "Vessa releases wave 1 invoices and schedules wave 2."
+        "You review the delivery package Vessa built.",
+        "You approve the artifact as-is.",
+        "Vessa delivers the package to the client workflow and marks the milestone complete."
       ],
       adjust: [
-        "Vessa lowers first-wave volume and extends due dates for selected accounts.",
-        "Vessa creates a custom exception list for your sign-off.",
-        "Vessa sends finance a revised release sequence."
+        "You request revisions on the package summary.",
+        "Vessa updates the artifact and resubmits for review.",
+        "After your approval, Vessa delivers the revised package."
       ],
       hold: [
-        "Invoice queue remains blocked and collection delays continue.",
-        "Vessa flags the accounts with highest exposure.",
-        "Vessa holds release actions pending manual override."
+        "The deliverable stays in review. Nothing is sent.",
+        "Vessa flags the milestone risk on Decide.",
+        "Delivery waits for your manual override."
       ]
     }
   },
   {
     id: "team-capacity-crunch",
     label: "Team capacity crunch",
+    lane: "action",
+    laneLabel: "Lane 1: Action approval",
     signal:
       "This week has a 34% workload spike, but two senior operators are at capacity and ticket response time is slipping.",
-    recommendation:
-      "Rebalance assignments, defer low-impact work, and open a temporary rapid-response lane for priority tickets.",
+    vessaMove:
+      "Vessa creates reassignment tasks, defers low-impact work in ClickUp, and opens a rapid-response lane, then routes those operational actions for your sign-off.",
     outcomes: {
       approve: [
-        "Vessa reassigns priority work to available operators.",
-        "Vessa defers low-impact tasks to next sprint.",
-        "Vessa activates a rapid-response lane with clear ownership."
+        "You approve reassignment. Vessa moves priority tickets to available operators.",
+        "You approve deferrals. Vessa pushes low-impact tasks to next sprint.",
+        "You approve the rapid-response lane. Vessa creates it with clear ownership."
       ],
       adjust: [
-        "Vessa keeps assignment map mostly intact.",
-        "Vessa defers fewer tasks and raises SLA warnings.",
-        "Vessa asks for one additional approval before rapid-response activation."
+        "You keep most assignments intact and approve a smaller reassignment set.",
+        "Vessa defers fewer tasks and resubmits the action batch.",
+        "You approve rapid-response with a narrower ticket scope."
       ],
       hold: [
-        "Current workload plan remains and response lag is likely to grow.",
+        "No routing changes run. Response lag is likely to grow.",
         "Vessa records capacity risk and alerts leadership.",
-        "No routing changes are executed."
+        "The action queue stays paused."
       ]
     }
   }
 ];
 
 const DECISIONS = [
-  { id: "approve", label: "Approve and execute" },
+  { id: "approve", label: "Approve" },
   { id: "adjust", label: "Adjust and continue" },
   { id: "hold", label: "Hold and escalate" }
 ];
@@ -111,8 +117,8 @@ export default function FinalVessaPage() {
             I will bring the clean move.
           </h1>
           <p className="mt-6 max-w-3xl text-base leading-8 text-[#B9B9CC]">
-            Meet Vessa, the autonomous AI COO that manages your Ops Hub, filters noise, surfaces decisions, and moves
-            work forward with traceability.
+            Meet Vessa, the autonomous AI COO that manages your Ops Hub. She creates tasks on her own, operates in two
+            lanes (action approval and deliverable review) and moves work forward with traceability.
           </p>
           <p className="mt-4 text-[#FF2FB3]">Chat is the interface. Execution is the product.</p>
           <div className="mt-8">
@@ -125,11 +131,12 @@ export default function FinalVessaPage() {
         <section className="border-b border-[#27273A] py-10">
           <h2 className="text-2xl font-semibold">Not a Chatbot. An Execution Interface.</h2>
           <p className="mt-4 text-[#B9B9CC]">
-            Most AI tools help you think. Vessa helps your business move.
+            Most AI tools help you think. Vessa creates work, executes in the right lane, and routes the checkpoint that
+            actually matters.
           </p>
           <ul className="mt-5 list-disc space-y-2 pl-5 text-[#B9B9CC]">
-            <li>A chatbot waits for prompts. Vessa surfaces what needs attention.</li>
-            <li>A chatbot generates text. Vessa prepares execution deliverables.</li>
+            <li>A chatbot waits for prompts. Vessa creates tasks and moves on what she sees.</li>
+            <li>A chatbot generates text. Vessa takes action or builds deliverables, then asks when needed.</li>
             <li>A chatbot helps you think. Vessa helps your business operate.</li>
           </ul>
         </section>
@@ -138,8 +145,8 @@ export default function FinalVessaPage() {
           <h2 className="text-2xl font-semibold">The Operating Layer Between Decisions and Done</h2>
           <p className="mt-4 text-[#B9B9CC]">
             Businesses usually do not break because nobody knows what is happening. They break because too much is
-            happening at once. Vessa catches the signal, understands context, prepares the move, and routes it where it
-            belongs.
+            happening at once. Vessa catches the signal, creates the work, picks the lane, and routes the right approval
+            checkpoint.
           </p>
           <ul className="mt-4 list-disc space-y-2 pl-5 text-[#B9B9CC]">
             <li>High-impact decisions appear on the Decide page.</li>
@@ -147,6 +154,42 @@ export default function FinalVessaPage() {
             <li>Completed actions move into the execution feed.</li>
             <li>Everything important is traceable.</li>
           </ul>
+        </section>
+
+        <section className="border-b border-[#27273A] py-10">
+          <h2 className="text-2xl font-semibold">Two Execution Lanes</h2>
+          <p className="mt-4 text-[#B9B9CC]">
+            Vessa does not pitch tasks for you to approve from scratch. She creates tasks on her own and operates in
+            two lanes, so you are always approving the right thing.
+          </p>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            <div className="rounded-lg border border-[#FF2FB3]/40 bg-[#10101A] p-5">
+              <p className="text-xs uppercase tracking-[0.18em] text-[#FF2FB3]">Lane 1: Action approval</p>
+              <h3 className="mt-2 text-lg font-semibold text-white">Approve the action, not a deliverable</h3>
+              <p className="mt-2 text-sm leading-7 text-[#B9B9CC]">
+                Vessa takes an operational action that needs your sign-off before it runs. There is no deliverable
+                artifact. You approve the action itself.
+              </p>
+              <ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-[#B9B9CC]">
+                <li>Creating a task in ClickUp and assigning teammates</li>
+                <li>Sending team comms</li>
+                <li>Reassigning or adjusting existing tasks</li>
+              </ul>
+            </div>
+            <div className="rounded-lg border border-[#B37DFF]/40 bg-[#10101A] p-5">
+              <p className="text-xs uppercase tracking-[0.18em] text-[#B37DFF]">Lane 2: Deliverable review</p>
+              <h3 className="mt-2 text-lg font-semibold text-white">Review the artifact, then she delivers</h3>
+              <p className="mt-2 text-sm leading-7 text-[#B9B9CC]">
+                Vessa executes the work, builds the artifact, and sends it to review. Once you approve the deliverable,
+                she delivers it.
+              </p>
+              <ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-[#B9B9CC]">
+                <li>Client update drafts and delivery packages</li>
+                <li>Proof-of-completion summaries staged for release</li>
+                <li>Revision-ready outputs that need a final human pass</li>
+              </ul>
+            </div>
+          </div>
         </section>
 
         <section className="border-b border-[#27273A] py-10">
@@ -159,23 +202,21 @@ export default function FinalVessaPage() {
               </p>
             </div>
             <div className="rounded-lg border border-[#27273A] bg-[#10101A] p-4">
-              <h3 className="font-medium text-white">Decide</h3>
+              <h3 className="font-medium text-white">Create</h3>
               <p className="mt-1 text-sm text-[#B9B9CC]">
-                Identifies priority, risk, and the highest-value next move.
+                Creates tasks on her own: action batches in Lane 1 or executable work in Lane 2.
               </p>
             </div>
             <div className="rounded-lg border border-[#27273A] bg-[#10101A] p-4">
-              <h3 className="font-medium text-white">Prepare</h3>
-              <p className="mt-1 text-sm text-[#B9B9CC]">Builds approval-ready operational deliverables.</p>
-            </div>
-            <div className="rounded-lg border border-[#27273A] bg-[#10101A] p-4">
-              <h3 className="font-medium text-white">Approve</h3>
-              <p className="mt-1 text-sm text-[#B9B9CC]">Routes high-impact approvals to the right human checkpoint.</p>
-            </div>
-            <div className="rounded-lg border border-[#27273A] bg-[#10101A] p-4">
-              <h3 className="font-medium text-white">Execute</h3>
+              <h3 className="font-medium text-white">Route</h3>
               <p className="mt-1 text-sm text-[#B9B9CC]">
-                Triggers tasks, ownership, status transitions, and communication workflows.
+                Sends action approvals or deliverable reviews to Decide, chat, or Workstream as appropriate.
+              </p>
+            </div>
+            <div className="rounded-lg border border-[#27273A] bg-[#10101A] p-4">
+              <h3 className="font-medium text-white">Execute / Deliver</h3>
+              <p className="mt-1 text-sm text-[#B9B9CC]">
+                Lane 1: runs approved actions. Lane 2: delivers the artifact after final approval.
               </p>
             </div>
             <div className="rounded-lg border border-[#27273A] bg-[#10101A] p-4">
@@ -200,7 +241,7 @@ export default function FinalVessaPage() {
             <div className="rounded-lg border border-[#27273A] bg-[#10101A] p-4">
               <h3 className="font-medium text-white">The Governor&apos;s Desk</h3>
               <p className="mt-1 text-sm text-[#B9B9CC]">
-                Identifies systemic failures like lost handoffs before they hit revenue.
+                Flags governance-sensitive moments like lost handoffs before they become operational failures.
               </p>
             </div>
             <div className="rounded-lg border border-[#27273A] bg-[#10101A] p-4">
@@ -220,41 +261,45 @@ export default function FinalVessaPage() {
 
         <section className="border-b border-[#27273A] py-10">
           <h2 className="text-2xl font-semibold">The Decide Page: Where Operations Stop Drifting</h2>
-          <p className="mt-4 text-[#B9B9CC]">No noise. No raw logs. Just decisions that require judgment.</p>
+          <p className="mt-4 text-[#B9B9CC]">
+            No noise. No raw logs. Just the checkpoint that matches the lane: action approval or deliverable review.
+          </p>
           <ul className="mt-5 list-disc space-y-2 pl-5 text-[#B9B9CC]">
-            <li>what Vessa is proposing</li>
+            <li>what Vessa created and which lane it is in</li>
             <li>why it matters</li>
             <li>risk, confidence, and expected impact</li>
-            <li>approval action and execution trace</li>
+            <li>your approval, revision, or hold, plus the execution trace</li>
           </ul>
-          <p className="mt-6 text-[#B9B9CC]">Leadership leverage comes from approving what matters, not reviewing everything.</p>
+          <p className="mt-6 text-[#B9B9CC]">
+            Leadership leverage comes from approving actions and reviewing deliverables, not re-deciding work Vessa
+            should already be doing.
+          </p>
         </section>
 
         <section className="border-b border-[#27273A] py-10">
-          <h2 className="text-2xl font-semibold">Execution Deliverables, Not AI Answers</h2>
+          <h2 className="text-2xl font-semibold">Actions and Artifacts, Not AI Answers</h2>
           <p className="mt-4 text-[#B9B9CC]">
-            Vessa creates business-ready operational objects that can be reviewed, approved, executed, and tracked.
+            Vessa does not stop at suggestions. In Lane 1 she routes operational actions for approval. In Lane 2 she
+            builds reviewable artifacts, waits for your sign-off, then delivers.
           </p>
           <ul className="mt-5 list-disc space-y-2 pl-5 text-[#B9B9CC]">
-            <li>SLA control decisions</li>
-            <li>QA enforcement decisions</li>
-            <li>workload balancing proposals</li>
-            <li>delivery package previews</li>
-            <li>exception response plans</li>
-            <li>execution contracts</li>
-            <li>bottleneck resolution outputs</li>
-            <li>internal communication approvals</li>
+            <li>ClickUp task creation, assignment, and reassignment actions</li>
+            <li>team comms queued for approval before send</li>
+            <li>delivery packages and client-ready drafts in review</li>
+            <li>proof-of-completion summaries staged for release</li>
+            <li>operator-ready context tied to each checkpoint</li>
           </ul>
         </section>
 
         <section className="border-b border-[#27273A] py-10">
           <h2 className="text-2xl font-semibold">Controlled Autonomy, Not Chaos</h2>
           <p className="mt-4 text-[#B9B9CC]">
-            Vessa does not blindly automate meaningful business actions. She knows when approval is required, where to
-            ask, and how to record the decision.
+            Vessa does not blindly automate meaningful business actions. She creates the work, picks the lane, and
+            records every approval before anything runs or ships.
           </p>
           <p className="mt-4 text-[#B9B9CC]">
-            High-impact decisions route through Decide. Lower-friction communication approvals can happen in chat.
+            Lane 1 actions and Lane 2 deliverables route through Decide when impact is high. Lower-friction action
+            approvals can happen in chat.
           </p>
           <p className="mt-4 text-[#FF2FB3]">You stay in control. The business moves faster.</p>
         </section>
@@ -262,7 +307,7 @@ export default function FinalVessaPage() {
         <section className="border-b border-[#27273A] py-10">
           <h2 className="text-2xl font-semibold">Try a Vessa Simulation</h2>
           <p className="mt-4 text-[#B9B9CC]">
-            Pick a real operational scenario. Make a decision. See how Vessa turns that decision into execution.
+            Pick a realistic scenario. See which lane Vessa is in, make the call, and trace what happens next.
           </p>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-3">
@@ -289,8 +334,10 @@ export default function FinalVessaPage() {
             <h3 className="text-lg font-semibold text-white">What Vessa sees</h3>
             <p className="mt-2 text-sm leading-7 text-[#B9B9CC]">{activeScenario.signal}</p>
 
-            <h3 className="mt-5 text-lg font-semibold text-white">What Vessa recommends</h3>
-            <p className="mt-2 text-sm leading-7 text-[#B9B9CC]">{activeScenario.recommendation}</p>
+            <p className="mt-2 text-xs uppercase tracking-[0.18em] text-[#FF2FB3]">{activeScenario.laneLabel}</p>
+
+            <h3 className="mt-5 text-lg font-semibold text-white">What Vessa is doing</h3>
+            <p className="mt-2 text-sm leading-7 text-[#B9B9CC]">{activeScenario.vessaMove}</p>
 
             <h3 className="mt-5 text-lg font-semibold text-white">Make the call</h3>
             <div className="mt-3 flex flex-col gap-2 sm:flex-row">
@@ -325,7 +372,7 @@ export default function FinalVessaPage() {
               ))}
             </ul>
             <p className="mt-4 text-xs uppercase tracking-[0.18em] text-[#FF2FB3]">
-              Simulated execution trace generated by Vessa logic
+              Experience demo. Representative of workflow logic, not a claim of exact live output.
             </p>
           </div>
         </section>
@@ -353,9 +400,9 @@ export default function FinalVessaPage() {
           <h3 className="mt-8 text-xl font-semibold">The Simple Version</h3>
           <ul className="mt-5 list-disc space-y-2 pl-5 text-[#B9B9CC]">
             <li>Vessa watches the business.</li>
-            <li>Vessa prepares the work.</li>
-            <li>Vessa asks when judgment is needed.</li>
-            <li>Vessa executes after approval.</li>
+            <li>Vessa creates tasks and picks the lane.</li>
+            <li>You approve actions or review deliverables.</li>
+            <li>Vessa executes or delivers after approval.</li>
             <li>Vessa tracks what happened.</li>
           </ul>
           <p className="mt-6 text-[#B9B9CC]">Not another chatbot. Not another dashboard. The interface where business work moves.</p>

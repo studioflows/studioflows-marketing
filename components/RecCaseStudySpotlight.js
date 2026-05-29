@@ -1,12 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
-import { REC_FEATURES } from "@/lib/rec-case-study";
+import {
+  HOME_BODY,
+  HOME_CARD,
+  HOME_CARD_ACCENT,
+  HOME_CARD_PAD,
+  HOME_CTA_PRIMARY_BLOCK,
+  HOME_EYEBROW_ACCENT,
+  HOME_EYEBROW_VIOLET,
+  HOME_H2,
+  HOME_SECTION,
+} from "@/components/home/home-tokens";
 import RecFitExplorer from "@/components/RecFitExplorer";
 import RecScreenshotLightbox, { RecScreenshotExpandHint } from "@/components/RecScreenshotLightbox";
+import { HOMEPAGE_CTA } from "@/lib/homepage-content";
+import { REC_FEATURES } from "@/lib/rec-case-study";
 
 const SECTION_REVEAL = {
   initial: { opacity: 0, y: 28, filter: "blur(8px)" },
@@ -15,21 +27,49 @@ const SECTION_REVEAL = {
   transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] },
 };
 
-const QUALIFIER_URL = "#diagnosis";
+function getFeatureGallery(feature) {
+  if (Array.isArray(feature.gallery) && feature.gallery.length > 0) {
+    return feature.gallery;
+  }
+  if (feature.image) {
+    return [{ src: feature.image, caption: null }];
+  }
+  return [];
+}
+
+function syncRecTabFromUrl(setActiveIndex, setGalleryIndex) {
+  if (typeof window === "undefined") return;
+  const rec = new URLSearchParams(window.location.search).get("rec");
+  if (!rec) return;
+  const index = REC_FEATURES.findIndex((feature) => feature.id === rec);
+  if (index >= 0) {
+    setActiveIndex(index);
+    setGalleryIndex(0);
+  }
+}
 
 export default function RecCaseStudySpotlight() {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [galleryIndex, setGalleryIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
+  useEffect(() => {
+    syncRecTabFromUrl(setActiveIndex, setGalleryIndex);
+    const onPopState = () => syncRecTabFromUrl(setActiveIndex, setGalleryIndex);
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
   const active = REC_FEATURES[activeIndex];
+  const gallery = getFeatureGallery(active);
+  const activeShot = gallery[galleryIndex] ?? gallery[0];
 
   return (
-    <motion.section className="pt-32 sm:pt-36 lg:pt-40" {...SECTION_REVEAL}>
-      <div className="rounded-[30px] bg-[linear-gradient(160deg,rgba(99,102,241,0.18),rgba(168,85,247,0.08),rgba(10,10,10,0.92))] p-5 shadow-[0_30px_90px_rgba(0,0,0,0.55)] sm:p-8">
-        <h2 className="text-left text-[clamp(1.9rem,3.8vw,3.4rem)] font-bold leading-tight">
-          Real Build Spotlight: REC Ops Control Surface
-        </h2>
-        <p className="mt-3 max-w-[920px] text-left text-base leading-7 text-white/78">
+    <motion.section id="rec-spotlight" className={HOME_SECTION} {...SECTION_REVEAL}>
+      <div className={`${HOME_CARD_ACCENT} ${HOME_CARD_PAD} sm:p-8 lg:p-10`}>
+        <p className={HOME_EYEBROW_ACCENT}>REC proof</p>
+        <h2 className={`mt-3 text-left ${HOME_H2}`}>Real Build Spotlight: REC Ops Control Surface</h2>
+        <p className={`mt-3 max-w-[920px] text-left ${HOME_BODY}`}>
           Built for Real Estate Cinema. The same control layer fits any service business running crews, jobs,
           confirmations, and day-of exceptions.
         </p>
@@ -37,7 +77,7 @@ export default function RecCaseStudySpotlight() {
         <RecFitExplorer />
 
         <div className="mt-8">
-          <p className="text-[10px] uppercase tracking-[0.22em] text-[#C4B5FD]">Test drive this week</p>
+          <p className={HOME_EYEBROW_VIOLET}>Test drive this week</p>
           <div className="mt-4 grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:gap-2">
             {REC_FEATURES.map((item, index) => {
               const isActive = activeIndex === index;
@@ -45,7 +85,10 @@ export default function RecCaseStudySpotlight() {
                 <motion.button
                   key={item.id}
                   type="button"
-                  onClick={() => setActiveIndex(index)}
+                  onClick={() => {
+                    setActiveIndex(index);
+                    setGalleryIndex(0);
+                  }}
                   className={`w-full rounded-lg px-4 py-2 text-center text-[10px] uppercase tracking-[0.12em] transition sm:w-auto sm:whitespace-nowrap sm:text-xs sm:tracking-[0.16em] ${
                     isActive
                       ? "bg-[#FACC15] text-black"
@@ -67,7 +110,7 @@ export default function RecCaseStudySpotlight() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.24 }}
-              className="mt-4 rounded-xl bg-black/40 p-4 shadow-[0_0_0_1px_rgba(196,181,253,0.2)] sm:p-5"
+              className={`mt-4 ${HOME_CARD} ${HOME_CARD_PAD}`}
             >
               <p className="text-sm font-semibold text-white/92">{active.scenarioTitle}</p>
               <ul className="mt-3 space-y-2">
@@ -97,12 +140,33 @@ export default function RecCaseStudySpotlight() {
         <div className="mt-5 grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
           <AnimatePresence mode="wait">
             <motion.div
-              key={active.id}
+              key={`${active.id}-${galleryIndex}`}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.28 }}
             >
+              {gallery.length > 1 && (
+                <div className="mb-3 flex flex-wrap gap-2">
+                  {gallery.map((shot, index) => {
+                    const isActiveShot = galleryIndex === index;
+                    return (
+                      <button
+                        key={shot.src}
+                        type="button"
+                        onClick={() => setGalleryIndex(index)}
+                        className={`rounded-lg px-3 py-1.5 text-left text-[10px] uppercase tracking-[0.14em] transition ${
+                          isActiveShot
+                            ? "bg-[#FACC15] text-black"
+                            : "bg-black/35 text-white/70 shadow-[0_0_0_1px_rgba(255,255,255,0.12)] hover:text-white"
+                        }`}
+                      >
+                        {index === 0 ? "Lifecycle & confirm" : "Field → delivery"}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
               <button
                 type="button"
                 onClick={() => setLightboxOpen(true)}
@@ -110,25 +174,28 @@ export default function RecCaseStudySpotlight() {
                 aria-label={`Expand ${active.label} screenshot`}
               >
                 <img
-                  src={active.image}
+                  src={activeShot?.src}
                   alt={active.label}
                   className="w-full rounded-xl object-cover"
                 />
                 <RecScreenshotExpandHint />
               </button>
+              {activeShot?.caption && (
+                <p className="mt-3 text-sm leading-6 text-white/72">{activeShot.caption}</p>
+              )}
             </motion.div>
           </AnimatePresence>
 
           <div className="space-y-3">
-            <div className="rounded-xl bg-black/40 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.12)]">
+            <div className={`${HOME_CARD} ${HOME_CARD_PAD}`}>
               <p className="text-[10px] uppercase tracking-[0.2em] text-[#FACC15]">BEFORE</p>
               <p className="mt-2 text-sm leading-6 text-white/76">{active.before}</p>
             </div>
-            <div className="rounded-xl bg-black/40 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.12)]">
+            <div className={`${HOME_CARD} ${HOME_CARD_PAD}`}>
               <p className="text-[10px] uppercase tracking-[0.2em] text-[#FACC15]">INSTALLED</p>
               <p className="mt-2 text-sm leading-6 text-white/76">{active.installed}</p>
             </div>
-            <div className="rounded-xl bg-black/40 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.12)]">
+            <div className={`${HOME_CARD} ${HOME_CARD_PAD}`}>
               <p className="text-[10px] uppercase tracking-[0.2em] text-[#FACC15]">OUTCOME</p>
               <ul className="mt-2 space-y-1">
                 {active.outcomes.map((outcome) => (
@@ -148,10 +215,10 @@ export default function RecCaseStudySpotlight() {
           </p>
           <motion.div whileHover={{ y: -1.5 }} whileTap={{ scale: 0.99 }}>
             <Link
-              href={QUALIFIER_URL}
-              className="inline-flex w-full justify-center rounded-xl bg-[#FACC15] px-5 py-3 text-center text-[10px] font-semibold uppercase tracking-[0.16em] text-black transition hover:brightness-105 sm:w-auto"
+              href={HOMEPAGE_CTA.primaryHref}
+              className={HOME_CTA_PRIMARY_BLOCK}
             >
-              Start Pre-Qualifier
+              {HOMEPAGE_CTA.primaryLabel}
             </Link>
           </motion.div>
         </div>
@@ -159,7 +226,7 @@ export default function RecCaseStudySpotlight() {
 
       <RecScreenshotLightbox
         open={lightboxOpen}
-        imageSrc={active.image}
+        imageSrc={activeShot?.src}
         alt={active.label}
         onClose={() => setLightboxOpen(false)}
       />

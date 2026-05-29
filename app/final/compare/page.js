@@ -20,7 +20,10 @@ export default function FinalComparePage() {
             <h2 className="font-medium">Current Vessa</h2>
           </Link>
           <Link href="/final/vessa" className="block rounded-lg border border-white/15 p-4">
-            <h2 className="font-medium">Candidate Vessa (Product Brand)</h2>
+            <h2 className="font-medium">Candidate Vessa (Earlier Draft)</h2>
+          </Link>
+          <Link href="/final/vessa-duplicate" className="block rounded-lg border border-emerald-400/30 p-4">
+            <h2 className="font-medium">Candidate Vessa (Refreshed, Active)</h2>
           </Link>
           <Link href="/final/behind-the-scenes" className="block rounded-lg border border-white/15 p-4">
             <h2 className="font-medium">Candidate Behind the Scenes (Axiom narrative)</h2>

@@ -2,14 +2,20 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { supabase } from "../../../lib/supabase";
+import {
+  loadLeadAttribution,
+  mergeLeadAttribution,
+  parseLeadAttribution,
+  toIngestAttribution,
+} from "../../../lib/lead-attribution";
+import { evaluateQualification } from "../../../lib/qualify-custom-ops-hub";
 
 const QUIZ_SECTIONS = [
   {
     id: "company-context",
-    title: "Context first. Precision follows.",
+    title: "Start with how your business actually runs",
     challenger:
-      "Most teams try to fix execution with more effort. We start by exposing the operating design behind the effort.",
+      "We map your operating model first so recommendations match how work really moves — not how the org chart says it should.",
     fields: [
       {
         name: "businessModel",
@@ -31,9 +37,9 @@ const QUIZ_SECTIONS = [
   },
   {
     id: "pain-area",
-    title: "Find the real pressure point.",
+    title: "Pinpoint where drag is costing you most",
     challenger:
-      "Most leaders diagnose symptoms. High-performing operators isolate the constraint that creates downstream drag.",
+      "Pick the area where delays, rework, or founder firefighting show up every week — that is the constraint we design against.",
     fields: [
       {
         name: "primaryPainArea",
@@ -47,9 +53,9 @@ const QUIZ_SECTIONS = [
   },
   {
     id: "bottleneck",
-    title: "Name the expensive bottleneck.",
+    title: "Name the bottleneck you want gone first",
     challenger:
-      "If everything is a priority, nothing changes. We focus on the one bottleneck that compounds cost every week.",
+      "One primary bottleneck per engagement — the pattern that keeps compounding cost until something breaks in front of a client.",
     fields: [
       {
         name: "highestCostBottleneck",
@@ -76,9 +82,9 @@ const QUIZ_SECTIONS = [
   },
   {
     id: "workflow-handling",
-    title: "Reveal how work actually moves.",
+    title: "Show how work actually moves today",
     challenger:
-      "Most operations look clear on paper but break in motion. This helps us map your true runtime.",
+      "Tell us which tools and habits carry the workflow today so we know what to connect, replace, or simplify.",
     fields: [
       {
         name: "workflowManagement",
@@ -116,9 +122,9 @@ const QUIZ_SECTIONS = [
   },
   {
     id: "urgency",
-    title: "Urgency defines execution strategy.",
+    title: "Timeline and risk if nothing changes",
     challenger:
-      "Strong operators do not wait for certainty. They quantify risk of inaction and act before the quarter compounds.",
+      "Be honest about the window you are operating in — it tells us whether to design for immediate execution or a phased rollout.",
     fields: [
       {
         name: "urgencyWindow",
@@ -146,9 +152,9 @@ const QUIZ_SECTIONS = [
   },
   {
     id: "ownership",
-    title: "Set the implementation depth.",
+    title: "How hands-on you want us during the build",
     challenger:
-      "Advisory alone rarely changes outcomes. Ownership clarity is what turns strategy into deployed capability.",
+      "Clarify how much execution you want StudioFlows to own versus collaborate on — it shapes team shape and delivery cadence.",
     fields: [
       {
         name: "implementationOwnership",
@@ -166,9 +172,9 @@ const QUIZ_SECTIONS = [
   },
   {
     id: "budget-approval",
-    title: "Align on decision reality.",
+    title: "Budget and who can say yes",
     challenger:
-      "Great projects fail when budget and authority are misaligned. We surface that early so nobody wastes cycles.",
+      "Align on realistic investment and approval path up front so we do not design a build you cannot green-light.",
     fields: [
       {
         name: "budgetRange",
@@ -195,9 +201,9 @@ const QUIZ_SECTIONS = [
   },
   {
     id: "contact",
-    title: "Lock your strategy session.",
+    title: "Lock your details for the audit handoff",
     challenger:
-      "Last step. Serious operators finish this and secure implementation clarity before more operational drag accumulates.",
+      "Last step — work email and company site so we can route you to the right next step without another intake form.",
     fields: [
       { name: "fullName", label: "Full name", type: "text", required: true, placeholder: "Jane Smith" },
       { name: "workEmail", label: "Work email", type: "email", required: true, placeholder: "jane@company.com" },
@@ -322,56 +328,16 @@ function shouldAutoAdvanceQuestion(question) {
   return question.autoAdvance === true;
 }
 
-function evaluateQualification(answers) {
-  let score = 0;
-  const reasons = [];
-
-  const urgencyScoreMap = {
-    "Now (0-30 days)": 3,
-    "Near term (1-3 months)": 2,
-    "This quarter": 1,
-    "This year": 0,
-  };
-  const budgetScoreMap = {
-    "Under $8k": 0,
-    "$8k-$12k": 1,
-    "$12k-$18k": 3,
-    "$18k-$30k": 3,
-    "$30k+": 2,
-  };
-  const approvalScoreMap = {
-    "Owner can approve immediately": 3,
-    "Owner + one stakeholder": 2,
-    "Needs team review this month": 1,
-    "Needs quarter planning cycle": 0,
-  };
-  const involvementScoreMap = {
-    "Low involvement: I want StudioFlows to handle most of it": 2,
-    "Shared involvement: we collaborate with weekly checkpoints": 2,
-    "High involvement: I want a strategy/blueprint first, then decide next steps": 1,
-  };
-
-  score += urgencyScoreMap[answers.urgencyWindow] || 0;
-  score += budgetScoreMap[answers.budgetRange] || 0;
-  score += approvalScoreMap[answers.approvalInvolvement] || 0;
-  score += involvementScoreMap[answers.implementationOwnership] || 0;
-
-  if (answers.quarterRisk === "Revenue risk increases" || answers.quarterRisk === "Delivery quality degrades") {
-    score += 1;
+function parseAttributionFromWindow() {
+  if (typeof window === "undefined") {
+    return toIngestAttribution(
+      mergeLeadAttribution(parseLeadAttribution(""), null)
+    );
   }
 
-  if (answers.budgetRange === "Under $8k") {
-    reasons.push("budget_below_smb_target");
-  }
-  if (answers.approvalInvolvement === "Needs quarter planning cycle") {
-    reasons.push("slow_approval_cycle");
-  }
-  if (answers.urgencyWindow === "This year") {
-    reasons.push("low_urgency_window");
-  }
-
-  const qualified = score >= 8;
-  return { qualified, score, reasons };
+  const urlAttribution = parseLeadAttribution(window.location.search);
+  const storedAttribution = loadLeadAttribution();
+  return toIngestAttribution(mergeLeadAttribution(urlAttribution, storedAttribution));
 }
 
 export default function CustomOpsHubClient() {
@@ -394,8 +360,14 @@ export default function CustomOpsHubClient() {
   const [submitState, setSubmitState] = useState("idle");
   const [submitMessage, setSubmitMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [leadId, setLeadId] = useState(null);
-  const [showBookingStep, setShowBookingStep] = useState(false);
+  const [consentAccepted, setConsentAccepted] = useState(false);
+  const [attribution, setAttribution] = useState(parseAttributionFromWindow);
+  const preQualBanner =
+    attribution.pq_score != null
+      ? `Homepage pre-qual snapshot: ${attribution.pq_score}/18${attribution.pq_band ? ` (${attribution.pq_band} drag)` : ""}. Full qualifier below sets fit.`
+      : null;
+  const [outreachNextSteps, setOutreachNextSteps] = useState([]);
+  const [marketingBucket, setMarketingBucket] = useState(null);
   const [showDisqualifiedStep, setShowDisqualifiedStep] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState(null);
   const [hasEditedCompanyWebsite, setHasEditedCompanyWebsite] = useState(false);
@@ -418,6 +390,10 @@ export default function CustomOpsHubClient() {
     typeof currentQuestionValue === "string" &&
     currentQuestionValue.trim().length > 0 &&
     !isBusinessEmail(currentQuestionValue);
+
+  useEffect(() => {
+    setAttribution(parseAttributionFromWindow());
+  }, []);
 
   useEffect(() => {
     const workEmail = answers.workEmail;
@@ -462,16 +438,6 @@ export default function CustomOpsHubClient() {
     window.requestAnimationFrame(focusNode);
     window.setTimeout(focusNode, 320);
   }, []);
-
-  const qualificationSummary = useMemo(
-    () => [
-      `Business model: ${answers.businessModel || "Not provided"}`,
-      `Primary pain: ${answers.primaryPainArea || "Not provided"}`,
-      `Urgency: ${answers.urgencyWindow || "Not provided"}`,
-      `Ownership expectation: ${answers.implementationOwnership || "Not provided"}`,
-    ],
-    [answers]
-  );
 
   const disqualificationSummary = useMemo(
     () => [
@@ -567,63 +533,54 @@ export default function CustomOpsHubClient() {
     setSubmitState("idle");
     setSubmitMessage("");
 
-    if (!supabase) {
-      setSubmitState("error");
-      setSubmitMessage("Submission is unavailable because Supabase environment variables are missing.");
+    const validationMessage = validateCurrentStep();
+    if (validationMessage) {
+      setStepError(validationMessage);
+      return;
+    }
+
+    if (!consentAccepted) {
+      setStepError("Please confirm consent to continue.");
       return;
     }
 
     setIsSubmitting(true);
-    const qualification = evaluateQualification(answers);
 
-    const payload = {
-      full_name: answers.fullName.trim(),
-      work_email: answers.workEmail.trim().toLowerCase(),
-      company_name: answers.companyName.trim(),
-      company_website: answers.companyWebsite.trim() || null,
-      business_model: answers.businessModel,
-      company_stage: answers.companyStage,
-      primary_pain_area: answers.primaryPainArea,
-      highest_cost_bottleneck: answers.highestCostBottleneck,
-      highest_cost_bottleneck_other: answers.highestCostBottleneckOther.trim() || null,
-      workflow_management: answers.workflowManagement,
-      frequent_breakdown: answers.frequentBreakdown,
-      frequent_breakdown_detail: answers.frequentBreakdownDetail.trim(),
-      urgency_window: answers.urgencyWindow,
-      quarter_risk: answers.quarterRisk,
-      implementation_ownership: answers.implementationOwnership,
-      budget_range: answers.budgetRange,
-      approval_involvement: answers.approvalInvolvement,
-      status: qualification.qualified ? "qualified" : "disqualified",
-      source_page: "services/custom-ops-hub",
-      raw_answers: answers,
-      metadata: {
-        path: typeof window !== "undefined" ? window.location.pathname : "/services/custom-ops-hub",
-        qualification_score: qualification.score,
-        qualification_reasons: qualification.reasons,
-        qualification_version: "v1",
-      },
-    };
+    try {
+      const response = await fetch("/api/studioflows/ingest-lead", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          consent: true,
+          form_payload: answers,
+          ...attribution,
+        }),
+      });
 
-    const { error } = await supabase.from("custom_ops_hub_leads").insert([payload]);
-    setIsSubmitting(false);
+      const result = await response.json().catch(() => ({}));
 
-    if (error) {
+      if (!response.ok) {
+        setSubmitState("error");
+        setSubmitMessage(result.error || "Unable to submit your qualification right now.");
+        return;
+      }
+
+      if (result.qualified && result.redirect_url) {
+        window.location.assign(result.redirect_url);
+        return;
+      }
+
+      setMarketingBucket(result.marketing_bucket || null);
+      setOutreachNextSteps(Array.isArray(result.outreach_next_steps) ? result.outreach_next_steps : []);
+      setSubmitState("success");
+      setSubmitMessage("Thanks for sharing your details. We saved your request and will follow up with next steps.");
+      setShowDisqualifiedStep(true);
+    } catch {
       setSubmitState("error");
-      setSubmitMessage(error.message || "Unable to submit your qualification right now.");
-      return;
+      setSubmitMessage("Unable to submit your qualification right now.");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setLeadId(null);
-    setSubmitState("success");
-    if (qualification.qualified) {
-      setSubmitMessage("Qualification complete. Your booking step is ready.");
-      setShowBookingStep(true);
-      return;
-    }
-
-    setSubmitMessage("Thanks for sharing your details. We saved your request and will follow up with next steps.");
-    setShowDisqualifiedStep(true);
   };
 
   const renderField = (field) => {
@@ -713,75 +670,27 @@ export default function CustomOpsHubClient() {
     );
   };
 
-  if (showBookingStep) {
-    return (
-      <main className="relative min-h-screen overflow-hidden bg-[#0A0A0A] text-[#F7F7F7]">
-        <div className="pointer-events-none absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,0.08)_0.5px,transparent_0.5px),linear-gradient(90deg,rgba(255,255,255,0.08)_0.5px,transparent_0.5px)] [background-size:64px_64px]" />
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_0%,rgba(99,102,241,0.2),transparent_28%),radial-gradient(circle_at_82%_0%,rgba(168,85,247,0.14),transparent_34%)]" />
-        <div className="relative z-10 mx-auto w-full max-w-[1100px] px-6 py-8 sm:px-8 lg:px-10">
-          <nav className="flex items-center justify-center py-4 sm:py-5">
-            <img
-              src="/StudioFlows logo white (1200 x 675 px).png"
-              alt="StudioFlows"
-              className="h-12 w-auto object-contain opacity-90 sm:h-14"
-            />
-          </nav>
-
-          <section className="mt-8 rounded-[28px] border border-[#FACC15]/35 bg-black/25 p-7 sm:p-10">
-            <p className="text-[11px] uppercase tracking-[0.24em] text-[#FACC15]">Qualification Complete</p>
-            <h1 className="mt-4 text-3xl font-semibold leading-tight tracking-tight text-white sm:text-5xl">
-              You are pre-qualified.
-              <br />
-              <span className="text-white/65">Book your strategy call.</span>
-            </h1>
-            <p className="mt-5 max-w-[760px] text-sm leading-7 text-white/75">
-              Your answers show a meaningful operational opportunity. This next step is where we challenge assumptions,
-              align on execution priorities, and map implementation scope.
-            </p>
-            <div className="mt-8 grid gap-2 sm:grid-cols-2">
-              {qualificationSummary.map((item) => (
-                <div key={item} className="rounded-xl border border-white/12 bg-black/30 px-4 py-3 text-sm text-white/80">
-                  {item}
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="mt-8 rounded-[28px] border border-white/12 bg-white/[0.02] p-7 sm:p-10">
-            <p className="text-[11px] uppercase tracking-[0.24em] text-[#FACC15]">Book Your Call</p>
-            <p className="mt-3 text-sm leading-7 text-white/72">
-              Pick your best time to meet. We will use your answers to focus the call on your most urgent operational
-              constraints.
-            </p>
-            <div
-              id="booking-module-slot"
-              data-lead-id={leadId || ""}
-              className="mt-6 rounded-2xl border border-dashed border-[#FACC15]/45 bg-black/30 p-8 text-center"
-            >
-              <p className="text-sm text-white/70">Your booking calendar will load here.</p>
-              <p className="mt-2 text-xs text-white/45">If it does not load, we will follow up by email.</p>
-            </div>
-          </section>
-        </div>
-      </main>
-    );
-  }
-
   if (showDisqualifiedStep) {
     return (
       <main className="relative min-h-screen overflow-hidden bg-[#0A0A0A] text-[#F7F7F7]">
         <div className="pointer-events-none absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,0.08)_0.5px,transparent_0.5px),linear-gradient(90deg,rgba(255,255,255,0.08)_0.5px,transparent_0.5px)] [background-size:64px_64px]" />
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_0%,rgba(99,102,241,0.2),transparent_28%),radial-gradient(circle_at_82%_0%,rgba(168,85,247,0.14),transparent_34%)]" />
         <div className="relative z-10 mx-auto w-full max-w-[1100px] px-6 py-8 sm:px-8 lg:px-10">
-          <nav className="flex items-center justify-center py-4 sm:py-5">
-            <img
-              src="/StudioFlows logo white (1200 x 675 px).png"
-              alt="StudioFlows"
-              className="h-12 w-auto object-contain opacity-90 sm:h-14"
-            />
-          </nav>
+        <nav className="flex items-center justify-center py-4 sm:py-5">
+          <img
+            src="/StudioFlows logo white (1200 x 675 px).png"
+            alt="StudioFlows"
+            className="h-12 w-auto object-contain opacity-90 sm:h-14"
+          />
+        </nav>
 
-          <section className="mt-8 rounded-[28px] border border-white/12 bg-black/25 p-7 sm:p-10">
+        {preQualBanner && (
+          <p className="mt-4 rounded-xl border border-[#FACC15]/30 bg-[#FACC15]/10 px-4 py-3 text-center text-sm text-[#FDE68A]">
+            {preQualBanner}
+          </p>
+        )}
+
+        <section className="mt-8 rounded-[28px] border border-white/12 bg-black/25 p-7 sm:p-10">
             <p className="text-[11px] uppercase tracking-[0.24em] text-[#FACC15]">Thank You</p>
             <h1 className="mt-4 text-3xl font-semibold leading-tight tracking-tight text-white sm:text-5xl">
               We received your request.
@@ -799,6 +708,19 @@ export default function CustomOpsHubClient() {
                 </div>
               ))}
             </div>
+            {outreachNextSteps.length > 0 && (
+              <ul className="mt-8 space-y-3 rounded-2xl border border-white/12 bg-black/30 p-5 text-sm leading-7 text-white/80">
+                {outreachNextSteps.map((step) => (
+                  <li key={step} className="flex gap-2">
+                    <span className="text-[#FACC15]">•</span>
+                    <span>{step}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {marketingBucket && (
+              <p className="mt-4 text-xs uppercase tracking-[0.18em] text-white/45">Outreach track: {marketingBucket}</p>
+            )}
           </section>
         </div>
       </main>
@@ -818,6 +740,12 @@ export default function CustomOpsHubClient() {
             className="h-12 w-auto object-contain opacity-90 sm:h-14"
           />
         </nav>
+
+        {preQualBanner && (
+          <p className="mt-4 rounded-xl border border-[#FACC15]/30 bg-[#FACC15]/10 px-4 py-3 text-center text-sm text-[#FDE68A]">
+            {preQualBanner}
+          </p>
+        )}
 
         <section className="py-10 text-center sm:py-14">
           <p className="text-[11px] uppercase tracking-[0.28em] text-[#FACC15]">StudioFlows</p>
@@ -892,6 +820,31 @@ export default function CustomOpsHubClient() {
                   Please use your company email (personal domains like Gmail/Yahoo are not accepted).
                 </div>
               )}
+
+              {questionIndex === totalQuestions - 1 && (
+                <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-xl border border-white/12 bg-black/25 px-4 py-3 text-sm leading-6 text-white/75">
+                  <input
+                    type="checkbox"
+                    checked={consentAccepted}
+                    onChange={(event) => {
+                      setConsentAccepted(event.target.checked);
+                      setStepError("");
+                    }}
+                    className="mt-1 h-4 w-4 shrink-0 rounded border-white/20 bg-black/40 accent-[#FACC15]"
+                  />
+                  <span>
+                    I agree to be contacted about my request and accept the{" "}
+                    <a href="/privacy-policy" className="text-[#FACC15] underline underline-offset-2">
+                      Privacy Policy
+                    </a>{" "}
+                    and{" "}
+                    <a href="/terms-of-service" className="text-[#FACC15] underline underline-offset-2">
+                      Terms of Service
+                    </a>
+                    .
+                  </span>
+                </label>
+              )}
             </motion.div>
           </AnimatePresence>
 
@@ -908,7 +861,12 @@ export default function CustomOpsHubClient() {
               <button
                 type="button"
                 onClick={handleNext}
-                disabled={isSubmitting || currentQuestionNeedsInputBlock || currentQuestionHasInvalidBusinessEmail}
+                disabled={
+                  isSubmitting ||
+                  currentQuestionNeedsInputBlock ||
+                  currentQuestionHasInvalidBusinessEmail ||
+                  (questionIndex === totalQuestions - 1 && !consentAccepted)
+                }
                 className="rounded-xl bg-[#FACC15] px-6 py-3 text-[11px] font-medium uppercase tracking-[0.2em] text-black transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {questionIndex === totalQuestions - 1 ? (isSubmitting ? "Submitting..." : "Qualify and Continue") : "Continue"}
