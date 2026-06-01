@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import {
   buildDisqualifiedLeadRow,
+  buildQualifiedLeadRow,
   evaluateQualification,
   getMarketingBucket,
   getOutreachNextSteps,
@@ -72,55 +73,87 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  // Qualified leads must always land in the marketing Supabase leads table,
+  // regardless of whether the OS ingest forward is configured.
+  const supabase = createMarketingSupabaseServerClient();
+  if (!supabase) {
+    return NextResponse.json({ error: "Lead storage not configured" }, { status: 500 });
+  }
+
+  const qualifiedRow = buildQualifiedLeadRow(raw, { score, reasons, qualified }, tier);
+  qualifiedRow.metadata = {
+    ...qualifiedRow.metadata,
+    ...attribution,
+  };
+
+  const { data: inserted, error: insertError } = await supabase
+    .from("custom_ops_hub_leads")
+    .insert([qualifiedRow])
+    .select("id")
+    .single();
+
+  if (insertError) {
+    return NextResponse.json(
+      { error: insertError.message || "Unable to save lead" },
+      { status: 500 }
+    );
+  }
+
+  const supabaseLeadId = (inserted?.id as string | undefined) ?? undefined;
+
+  const { first_name, last_name } = splitName(raw.fullName);
+  const email = typeof raw.workEmail === "string" ? raw.workEmail.trim().toLowerCase() : null;
+
+  // Best-effort forward into the StudioFlows OS tenant ingest. If env is not
+  // configured or the call fails, the lead is already persisted in Supabase, so
+  // we still complete the funnel instead of erroring out.
   const ingestUrl = process.env.STUDIOFLOWS_INGEST_URL?.replace(/\/$/, "");
   const tenantSlug = process.env.STUDIOFLOWS_TENANT_SLUG ?? "app";
   const token = process.env.STUDIOFLOWS_INGEST_TOKEN;
   const apikey = process.env.SUPABASE_ANON_KEY;
 
-  if (!ingestUrl || !token || !apikey) {
-    return NextResponse.json({ error: "Ingest not configured" }, { status: 500 });
+  let osLeadId: string | undefined;
+  if (ingestUrl && token && apikey) {
+    try {
+      const ingestRes = await fetch(`${ingestUrl}/consulting-ingest-lead`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey,
+          "x-studioflows-tenant-slug": tenantSlug,
+          "x-studioflows-ingest-token": token,
+        },
+        body: JSON.stringify({
+          email,
+          first_name,
+          last_name,
+          source: "studioflows.co/custom-ops-hub",
+          landing_path: attribution.landing_path,
+          consent: true,
+          form_name: "custom_ops_hub_qualifier",
+          form_payload: raw,
+          metadata: {
+            path: "/services/custom-ops-hub",
+            qualification_score: score,
+            qualification_reasons: reasons,
+            qualification_version: "v1",
+            recommended_tier: tier,
+            supabase_lead_id: supabaseLeadId,
+            ...attribution,
+          },
+        }),
+      });
+
+      const ingestBody = (await ingestRes.json().catch(() => ({}))) as Record<string, unknown>;
+      if (ingestRes.ok) {
+        osLeadId = ingestBody.lead_id as string | undefined;
+      }
+    } catch {
+      // Swallow: the lead is safely stored in Supabase; OS forward is optional.
+    }
   }
 
-  const { first_name, last_name } = splitName(raw.fullName);
-  const email = typeof raw.workEmail === "string" ? raw.workEmail.trim().toLowerCase() : null;
-
-  const ingestRes = await fetch(`${ingestUrl}/consulting-ingest-lead`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      apikey,
-      "x-studioflows-tenant-slug": tenantSlug,
-      "x-studioflows-ingest-token": token,
-    },
-    body: JSON.stringify({
-      email,
-      first_name,
-      last_name,
-      source: "studioflows.co/custom-ops-hub",
-      landing_path: attribution.landing_path,
-      consent: true,
-      form_name: "custom_ops_hub_qualifier",
-      form_payload: raw,
-      metadata: {
-        path: "/services/custom-ops-hub",
-        qualification_score: score,
-        qualification_reasons: reasons,
-        qualification_version: "v1",
-        recommended_tier: tier,
-        ...attribution,
-      },
-    }),
-  });
-
-  const ingestBody = (await ingestRes.json().catch(() => ({}))) as Record<string, unknown>;
-  if (!ingestRes.ok) {
-    return NextResponse.json(
-      { error: (ingestBody.error as string) ?? "Ingest failed" },
-      { status: ingestRes.status }
-    );
-  }
-
-  const leadId = ingestBody.lead_id as string | undefined;
+  const leadId = osLeadId ?? supabaseLeadId;
   const consultingBase = (
     process.env.STUDIOFLOWS_CONSULTING_SELL_URL ?? "https://consulting.studioflows.co/s/app"
   ).trim();
