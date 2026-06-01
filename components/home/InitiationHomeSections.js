@@ -1901,7 +1901,7 @@ function ConfessionRealityBreak({ surface, breakLine, scattered }) {
                     ) : null}
                     <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#6FB58E]" />
                   </span>
-                  operational status — nominal
+                  system status — all good
                 </div>
                 <p className="mt-7 text-sm leading-7 text-[#9B9894]">{surface[0]}</p>
                 <p className="mt-3 font-serif text-2xl font-semibold leading-tight tracking-[-0.02em] text-[#EEF1ED] sm:text-3xl">
@@ -1990,15 +1990,17 @@ function FounderCrtTv({ progressTarget }) {
     offset: ["start end", "end start"],
   });
   const y = useTransform(scrollYProgress, [0, 1], reduce ? ["0%", "0%"] : ["-7%", "7%"]);
-  const ghost = useTransform(scrollYProgress, [0.1, 0.32, 0.58, 0.8], [0, 0.92, 0.92, 0]);
+  // The TV now sits low in the section, so it's on screen in the latter part of
+  // the scroll — peak the ghost there.
+  const ghost = useTransform(scrollYProgress, [0.45, 0.62, 0.85, 0.98], [0, 0.92, 0.92, 0]);
   const ghostX = useTransform(scrollYProgress, [0, 1], reduce ? [0, 0] : [-7, 7]);
   // Screen-glass rectangle inside the TV photo (percentages, tuned to the asset).
   const screen = { left: "13.5%", top: "31.5%", width: "59%", height: "36%" };
 
   return (
-    <div className="relative mt-12 hidden lg:block" aria-hidden="true">
+    <div className="relative hidden lg:mt-auto lg:block lg:pl-5" aria-hidden="true">
       <div
-        className="pointer-events-none absolute -inset-x-8 bottom-2 h-44 bg-[radial-gradient(ellipse_at_center,rgba(219,39,119,0.16),transparent_70%)] blur-2xl"
+        className="pointer-events-none absolute inset-x-0 bottom-6 h-40 bg-[radial-gradient(ellipse_at_center,rgba(219,39,119,0.14),transparent_70%)] blur-2xl"
       />
       <motion.div style={{ y }} className="relative">
         <div className="relative aspect-[4/5] w-full overflow-hidden">
@@ -2007,7 +2009,7 @@ function FounderCrtTv({ progressTarget }) {
             alt=""
             fill
             sizes="(min-width: 1024px) 360px, 1px"
-            className="select-none object-contain"
+            className="select-none object-contain mix-blend-screen"
           />
 
           {/* live screen */}
@@ -2110,8 +2112,8 @@ export function InitiationFounderStorySection({ content }) {
       <RevealSection>
         <div className="relative mx-auto max-w-7xl px-5 sm:px-8">
           <div className="grid gap-12 lg:grid-cols-[0.76fr_1.24fr] lg:gap-16">
-            <aside className="lg:sticky lg:top-24 lg:self-start">
-              <div className="border-l border-[#DB2777]/25 pl-5">
+            <aside className="lg:flex lg:flex-col">
+              <div className="border-l border-[#DB2777]/25 pl-5 lg:sticky lg:top-24">
                 <p className="font-mono text-xs uppercase tracking-[0.28em] text-[#DB2777]/70">
                   03 / the private version
                 </p>
@@ -2123,11 +2125,11 @@ export function InitiationFounderStorySection({ content }) {
                   <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-[#DB2777]/65">
                     Behind the scenes
                   </p>
-                  <p className="mt-3 text-sm leading-6 text-[#B8B5B0]">Movement was not control.</p>
+                  <p className="mt-3 text-sm leading-6 text-[#B8B5B0]">Being busy wasn't being in control.</p>
                 </div>
-
-                <FounderCrtTv progressTarget={sectionRef} />
               </div>
+
+              <FounderCrtTv progressTarget={sectionRef} />
             </aside>
 
             <div>
@@ -3219,9 +3221,9 @@ export function InitiationStudioFlowsRevealSection({ content }) {
 
   // Scroll in → eyes rise out of black; hold; scroll out → dissolve back to black
   // (fully gone by ~0.85 so there's a clean black beat before the copy enters).
-  const eyesOpacity = useTransform(scrollYProgress, [0, 0.14, 0.6, 0.85], [0, 1, 1, 0]);
-  const smokeOpacity = useTransform(scrollYProgress, [0, 0.18, 0.58, 0.85], [0, 1, 1, 0]);
-  const glowOpacity = useTransform(scrollYProgress, [0, 0.45, 0.8], [0, 1, 0]);
+  const eyesOpacity = useTransform(scrollYProgress, [0, 0.16, 0.64, 0.9], [0, 1, 1, 0]);
+  const smokeOpacity = useTransform(scrollYProgress, [0, 0.2, 0.6, 0.9], [0, 1, 1, 0]);
+  const glowOpacity = useTransform(scrollYProgress, [0, 0.45, 0.82], [0, 1, 0]);
   // Parallax — the gaze drifts (Ken Burns) while the smoke drifts the other way.
   const eyesY = useTransform(scrollYProgress, [0, 1], ["-7%", "9%"]);
   const eyesScale = useTransform(scrollYProgress, [0, 1], [1.18, 1.0]);
@@ -3231,7 +3233,7 @@ export function InitiationStudioFlowsRevealSection({ content }) {
     <section
       id={content.anchor}
       aria-labelledby="initiation-studioflows-reveal-heading"
-      className="relative z-10 scroll-mt-24 bg-[#050509]"
+      className="relative z-10 scroll-mt-24 bg-black"
     >
       {/* THE WATCHER — a scroll-pinned stage so the gaze rises and dissolves */}
       <div ref={stageRef} className="relative h-[200vh]">
@@ -3255,11 +3257,10 @@ export function InitiationStudioFlowsRevealSection({ content }) {
               className="object-cover"
               style={{
                 objectPosition: "50% 38%",
-                filter: "grayscale(0.64) contrast(1.06) brightness(0.78)",
+                filter: "grayscale(0.95) contrast(1.14) brightness(0.68)",
               }}
             />
-            <div className="absolute inset-0 bg-[#D4A853]/[0.12] mix-blend-overlay" />
-            <div className="absolute inset-0 bg-[#DB2777]/[0.04] mix-blend-soft-light" />
+            <div className="absolute inset-0 bg-[#D4A853]/[0.04] mix-blend-overlay" />
           </motion.div>
 
           {/* iris glow — the gaze breathing (fades with scroll) */}
@@ -3290,12 +3291,12 @@ export function InitiationStudioFlowsRevealSection({ content }) {
             className="pointer-events-none absolute inset-0"
             style={{
               background:
-                "radial-gradient(62% 58% at 50% 40%, transparent 30%, rgba(5,5,9,0.6) 66%, #050509 100%)",
+                "radial-gradient(62% 58% at 50% 40%, transparent 26%, rgba(0,0,0,0.7) 60%, #000 100%)",
             }}
             aria-hidden="true"
           />
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#050509] to-transparent" aria-hidden="true" />
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-[#050509]" aria-hidden="true" />
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black to-transparent" aria-hidden="true" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-44 bg-gradient-to-b from-transparent to-black" aria-hidden="true" />
 
           <p className="absolute inset-x-0 bottom-[12vh] text-center font-mono text-xs uppercase tracking-[0.3em] text-[#D4A853]/70">
             06 / the system appears
@@ -3756,7 +3757,7 @@ export function InitiationCompoundingIntelligenceSection({ content }) {
   useEffect(() => {
     if (reduce || !inView) return undefined;
     const start = performance.now();
-    const dur = 2800;
+    const dur = 3920;
     let raf = 0;
     const tick = (now) => {
       const p = Math.min(1, (now - start) / dur);
@@ -4382,12 +4383,12 @@ export function SystemResetTransition() {
   }, [inView, reduce]);
 
   const lines = [
-    { at: 1, text: "root@studioflows:~# ./scan_dependencies.sh", tone: "muted" },
-    { at: 1, text: "[CRITICAL] human bottleneck detected — inefficiency cached in memory", tone: "alert" },
-    { at: 2, text: "root@studioflows:~# kill -9 human_dependency_daemon", tone: "bright" },
-    { at: 2, text: "founder.exe no longer load-bearing", tone: "muted" },
-    { at: 3, text: "root@studioflows:~# ./deploy_infrastructure.sh --force", tone: "bright" },
-    { at: 3, text: "deploying autonomous operating layer ...", tone: "amber" },
+    { at: 1, text: "root@studioflows:~# checking what depends on you...", tone: "muted" },
+    { at: 1, text: "[ alert ] found it — the business waits on one person", tone: "alert" },
+    { at: 2, text: "root@studioflows:~# taking the weight off the owner", tone: "bright" },
+    { at: 2, text: "you no longer have to hold it all up", tone: "muted" },
+    { at: 3, text: "root@studioflows:~# turning on the system", tone: "bright" },
+    { at: 3, text: "starting the layer that runs the work...", tone: "amber" },
   ];
 
   const whiteout = phase >= 4;
@@ -4446,7 +4447,7 @@ export function SystemResetTransition() {
           animate={{ opacity: 1 }}
           transition={{ delay: reduce ? 0 : 0.45, duration: 0.5 }}
         >
-          [ ok ] autonomous layer online
+          [ ok ] the system is running
         </motion.p>
       ) : null}
     </section>
