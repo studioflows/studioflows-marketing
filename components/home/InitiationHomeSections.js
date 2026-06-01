@@ -1799,22 +1799,37 @@ function ConfessionRealityBreak({ surface, breakLine, scattered }) {
   const reduce = useReducedMotion();
   const { mark } = useProgression();
   const ref = useRef(null);
-  const inView = useInView(ref, { once: true, margin: "-22% 0px -22% 0px" });
+  const nearView = useInView(ref, { margin: "0px 0px -15% 0px" });
+  const wasNear = useRef(false);
   const [broken, setBroken] = useState(reduce);
+  const brokenRef = useRef(reduce);
 
+  // The reader breaks the surface themselves — a deliberate click / tap (or
+  // Enter/Space) shatters the "nominal" facade. Hover no longer fires it, so the
+  // reader gets to read the calm surface before they choose to break it.
+  const trigger = useCallback(() => {
+    if (brokenRef.current) return;
+    brokenRef.current = true;
+    setBroken(true);
+    mark("confession");
+  }, [mark]);
+
+  // Reduced motion: skip straight to the exposed reality.
   useEffect(() => {
-    if (reduce) {
-      setBroken(true);
-      mark("confession");
-      return undefined;
+    if (reduce) trigger();
+  }, [reduce, trigger]);
+
+  // Fallback ONLY if they scroll past without interacting — so the copy is never
+  // permanently hidden, but the reveal never auto-fires while it's on screen.
+  // The reader's hover/tap/focus stays the intended trigger.
+  useEffect(() => {
+    if (reduce) return;
+    if (nearView) {
+      wasNear.current = true;
+    } else if (wasNear.current && !broken) {
+      trigger();
     }
-    if (!inView) return undefined;
-    const t = window.setTimeout(() => {
-      setBroken(true);
-      mark("confession");
-    }, 1750);
-    return () => window.clearTimeout(t);
-  }, [inView, reduce, mark]);
+  }, [nearView, reduce, broken, trigger]);
 
   return (
     <div ref={ref} className="relative mt-12 min-h-[460px] sm:min-h-[430px]">
@@ -1827,24 +1842,87 @@ function ConfessionRealityBreak({ surface, breakLine, scattered }) {
             exit={{ opacity: 0, scale: 1.06, filter: "blur(13px)", x: [0, -9, 7, -3, 0] }}
             transition={{ duration: 0.55, ease: "easeIn" }}
           >
-            <div className="w-full max-w-xl rounded-[2rem] border border-white/[0.12] bg-gradient-to-b from-white/[0.07] to-white/[0.02] p-8 text-center shadow-[0_34px_130px_rgba(0,0,0,0.45)] sm:p-10">
-              <div className="flex items-center justify-center gap-2.5 font-mono text-[10px] uppercase tracking-[0.28em] text-[#6FB58E]">
-                <span className="relative flex h-1.5 w-1.5">
-                  {!reduce ? (
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#6FB58E]/50" />
-                  ) : null}
-                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#6FB58E]" />
-                </span>
-                operational status — nominal
+            <motion.div
+              role="button"
+              tabIndex={0}
+              aria-label="Click to break the surface and reveal what was underneath"
+              onClick={trigger}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  trigger();
+                }
+              }}
+              initial={false}
+              animate={
+                reduce
+                  ? {}
+                  : {
+                      x: [0, 0, 0, 0, -2.5, 3, -1.5, 1, 0],
+                      skewX: [0, 0, 0, 0, -1.4, 1.1, 0, 0, 0],
+                      opacity: [1, 1, 1, 1, 0.82, 1, 0.9, 1, 1],
+                    }
+              }
+              transition={
+                reduce
+                  ? undefined
+                  : {
+                      duration: 3.6,
+                      repeat: Infinity,
+                      repeatDelay: 1,
+                      times: [0, 0.55, 0.78, 0.84, 0.87, 0.9, 0.93, 0.96, 1],
+                      ease: "easeInOut",
+                    }
+              }
+              whileHover={reduce ? undefined : { scale: 1.012 }}
+              whileTap={reduce ? undefined : { scale: 0.985 }}
+              className="group relative w-full max-w-xl cursor-pointer rounded-[2rem] border border-white/[0.12] bg-gradient-to-b from-white/[0.07] to-white/[0.02] p-8 text-center shadow-[0_34px_130px_rgba(0,0,0,0.45)] transition-[border-color] duration-300 hover:border-[#DB2777]/45 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#DB2777]/50 sm:p-10"
+            >
+              {!reduce ? (
+                <motion.span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 rounded-[2rem] mix-blend-screen"
+                  style={{ background: "linear-gradient(160deg, rgba(219,39,119,0.16), transparent 42%)" }}
+                  animate={{ opacity: [0, 0, 0, 0, 0.7, 0, 0.45, 0, 0] }}
+                  transition={{
+                    duration: 3.6,
+                    repeat: Infinity,
+                    repeatDelay: 1,
+                    times: [0, 0.55, 0.78, 0.84, 0.87, 0.9, 0.93, 0.96, 1],
+                    ease: "easeOut",
+                  }}
+                />
+              ) : null}
+              <div className="relative z-10">
+                <div className="flex items-center justify-center gap-2.5 font-mono text-[10px] uppercase tracking-[0.28em] text-[#6FB58E]">
+                  <span className="relative flex h-1.5 w-1.5">
+                    {!reduce ? (
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#6FB58E]/50" />
+                    ) : null}
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#6FB58E]" />
+                  </span>
+                  operational status — nominal
+                </div>
+                <p className="mt-7 text-sm leading-7 text-[#9B9894]">{surface[0]}</p>
+                <p className="mt-3 font-serif text-2xl font-semibold leading-tight tracking-[-0.02em] text-[#EEF1ED] sm:text-3xl">
+                  {surface[1]}
+                </p>
+                <p className="mt-7 font-mono text-[10px] uppercase tracking-[0.26em] text-[#9B9894]/40">
+                  the version everyone saw
+                </p>
+                {!reduce ? (
+                  <motion.span
+                    animate={{ opacity: [0.55, 1, 0.55] }}
+                    transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+                    className="mt-6 flex items-center justify-center gap-2 font-mono text-[10px] uppercase tracking-[0.28em] text-[#DB2777] group-hover:text-[#F7D7E6]"
+                  >
+                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#DB2777] shadow-[0_0_10px_rgba(219,39,119,0.8)]" />
+                    <span className="sm:hidden">tap to break the surface</span>
+                    <span className="hidden sm:inline">click to break the surface</span>
+                  </motion.span>
+                ) : null}
               </div>
-              <p className="mt-7 text-sm leading-7 text-[#9B9894]">{surface[0]}</p>
-              <p className="mt-3 font-serif text-2xl font-semibold leading-tight tracking-[-0.02em] text-[#EEF1ED] sm:text-3xl">
-                {surface[1]}
-              </p>
-              <p className="mt-7 font-mono text-[10px] uppercase tracking-[0.26em] text-[#9B9894]/40">
-                the version everyone saw
-              </p>
-            </div>
+            </motion.div>
           </motion.div>
         ) : null}
       </AnimatePresence>
@@ -1900,7 +1978,114 @@ function ConfessionRealityBreak({ surface, breakLine, scattered }) {
   );
 }
 
+// Eerie watcher for the confession's dead left column (desktop only): the dusty
+// CRT that "everyone saw" — pinned, dead static, scanlines, a slow vertical roll
+// and a ghost that bleeds in and out as the section scrolls. The screen reads
+// STATUS: NOMINAL over a flatline — the calm lie, made visible. Reduced-motion:
+// a still, dim screen. Purely atmospheric (aria-hidden).
+function FounderCrtTv({ progressTarget }) {
+  const reduce = useReducedMotion();
+  const { scrollYProgress } = useScroll({
+    target: progressTarget,
+    offset: ["start end", "end start"],
+  });
+  const y = useTransform(scrollYProgress, [0, 1], reduce ? ["0%", "0%"] : ["-7%", "7%"]);
+  const ghost = useTransform(scrollYProgress, [0.1, 0.32, 0.58, 0.8], [0, 0.92, 0.92, 0]);
+  const ghostX = useTransform(scrollYProgress, [0, 1], reduce ? [0, 0] : [-7, 7]);
+  // Screen-glass rectangle inside the TV photo (percentages, tuned to the asset).
+  const screen = { left: "13.5%", top: "31.5%", width: "59%", height: "36%" };
+
+  return (
+    <div className="relative mt-12 hidden lg:block" aria-hidden="true">
+      <div
+        className="pointer-events-none absolute -inset-x-8 bottom-2 h-44 bg-[radial-gradient(ellipse_at_center,rgba(219,39,119,0.16),transparent_70%)] blur-2xl"
+      />
+      <motion.div style={{ y }} className="relative">
+        <div className="relative aspect-[4/5] w-full overflow-hidden">
+          <Image
+            src="/founder/crt-tv.png"
+            alt=""
+            fill
+            sizes="(min-width: 1024px) 24vw, 0px"
+            className="select-none object-contain"
+          />
+
+          {/* live screen */}
+          <div
+            className="absolute overflow-hidden rounded-[10%]"
+            style={screen}
+          >
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(34,42,38,0.95),rgba(5,6,8,1)_72%)]" />
+
+            {!reduce ? (
+              <motion.div
+                className="absolute inset-0 mix-blend-screen"
+                style={{ backgroundImage: RANSOM_GRAIN, backgroundSize: "110px 110px" }}
+                animate={{ opacity: [0.05, 0.17, 0.08, 0.14, 0.06] }}
+                transition={{ duration: 0.5, repeat: Infinity, ease: "linear" }}
+              />
+            ) : (
+              <div
+                className="absolute inset-0 opacity-[0.08]"
+                style={{ backgroundImage: RANSOM_GRAIN, backgroundSize: "110px 110px" }}
+              />
+            )}
+
+            <div
+              className="absolute inset-0 opacity-30"
+              style={{
+                backgroundImage:
+                  "repeating-linear-gradient(to bottom, rgba(0,0,0,0.55) 0 1px, transparent 1px 3px)",
+              }}
+            />
+
+            {!reduce ? (
+              <motion.div
+                className="absolute inset-x-0 h-1/3 bg-gradient-to-b from-transparent via-white/12 to-transparent"
+                animate={{ y: ["-40%", "140%"] }}
+                transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
+              />
+            ) : null}
+
+            <motion.div
+              style={{ opacity: reduce ? 0.24 : ghost, x: ghostX }}
+              className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-3"
+            >
+              <span className="font-mono text-[8px] uppercase tracking-[0.34em] text-[#6FB58E]/85 [text-shadow:0_0_8px_rgba(111,181,142,0.7)]">
+                status: nominal
+              </span>
+              <svg viewBox="0 0 100 20" className="w-4/5 text-[#6FB58E]/75" fill="none">
+                <motion.path
+                  d="M0 10 H38 l2.5 -7 l2 9 l2.5 -8 l2 6 H100"
+                  stroke="currentColor"
+                  strokeWidth="1.1"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{ filter: "drop-shadow(0 0 4px rgba(111,181,142,0.6))" }}
+                  animate={reduce ? {} : { opacity: [0.55, 1, 0.55] }}
+                  transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+                />
+              </svg>
+            </motion.div>
+
+            {/* glass curvature + vignette */}
+            <div
+              className="absolute inset-0"
+              style={{ boxShadow: "inset 0 0 34px 8px rgba(0,0,0,0.85)" }}
+            />
+          </div>
+        </div>
+      </motion.div>
+
+      <p className="mt-4 text-center font-mono text-[10px] uppercase tracking-[0.28em] text-[#9B9894]/35">
+        the channel no one switched off
+      </p>
+    </div>
+  );
+}
+
 export function InitiationFounderStorySection({ content }) {
+  const sectionRef = useRef(null);
   const body = content.body;
 
   const surface = body.slice(1, 3);
@@ -1912,6 +2097,7 @@ export function InitiationFounderStorySection({ content }) {
 
   return (
     <section
+      ref={sectionRef}
       aria-labelledby="initiation-founder-story-heading"
       className="relative z-10 scroll-mt-24 overflow-hidden bg-[#07070C] py-24 sm:py-28 lg:py-36"
     >
@@ -1939,6 +2125,8 @@ export function InitiationFounderStorySection({ content }) {
                   </p>
                   <p className="mt-3 text-sm leading-6 text-[#B8B5B0]">Movement was not control.</p>
                 </div>
+
+                <FounderCrtTv progressTarget={sectionRef} />
               </div>
             </aside>
 
@@ -1993,7 +2181,7 @@ export function InitiationFounderStorySection({ content }) {
                       <p className="mt-8 max-w-2xl text-xl leading-9 text-[#C2BFBA] sm:text-2xl">{pre}</p>
                     ) : null}
                     <div className="mt-4 text-[2.4rem] leading-[1.02] sm:text-[3.75rem] lg:text-[5.25rem]">
-                      <RansomText text={KERNEL} baseSize={1} />
+                      <RansomText text={KERNEL} baseSize={1} scrollReveal />
                     </div>
                     {post ? (
                       <p className="mt-5 max-w-2xl text-xl leading-9 text-[#C2BFBA] sm:text-2xl">{post}</p>
@@ -2051,8 +2239,18 @@ function ransomRand(seed) {
   return x - Math.floor(x);
 }
 
-function RansomText({ text, className = "", baseSize = 1.6 }) {
+function RansomText({ text, className = "", baseSize = 1.6, scrollReveal = false }) {
   const reduce = useReducedMotion();
+  const ref = useRef(null);
+  // Scroll-linked assembly: each torn scrap slams into place tied to scroll
+  // position, so the accusation builds slow and painful at the reader's own pace
+  // (no auto-play). The window is intentionally long so it takes real scrolling.
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start 88%", "start 22%"] });
+  const [p, setP] = useState(reduce || !scrollReveal ? 1 : 0);
+  useMotionValueEvent(scrollYProgress, "change", (v) => {
+    if (reduce || !scrollReveal) return;
+    setP(Math.min(1, Math.max(0, v)));
+  });
 
   const letters = useMemo(
     () =>
@@ -2070,27 +2268,24 @@ function RansomText({ text, className = "", baseSize = 1.6 }) {
     [text],
   );
 
+  // How many scraps are mid-landing at once — smaller = more strictly one-by-one.
+  const SPREAD = 1.8;
+  const total = text.length || 1;
+  const easeOut = (x) => 1 - Math.pow(1 - x, 2.2);
+
   return (
-    <span className={`inline-flex flex-wrap items-center gap-x-1.5 gap-y-3 ${className}`} aria-label={text}>
-      {letters.map((l) =>
-        l.ch === " " ? (
-          <span key={l.key} className="w-2.5 sm:w-3.5" aria-hidden="true" />
-        ) : (
-          <motion.span
-            key={l.key}
-            aria-hidden="true"
-            className="relative inline-block"
-            style={{
-              filter: "drop-shadow(2px 5px 4px rgba(0,0,0,0.55))",
-              ...(reduce ? { transform: `rotate(${l.rotate}deg)` } : null),
-            }}
-            initial={reduce ? false : { opacity: 0, y: -18, rotate: l.rotate * 2.2, scale: 0.5 }}
-            whileInView={reduce ? undefined : { opacity: 1, y: l.yShift, rotate: l.rotate, scale: 1 }}
-            viewport={{ once: true, margin: "-12% 0px" }}
-            transition={
-              reduce ? undefined : { duration: 0.4, delay: l.key * 0.055, ease: [0.34, 1.56, 0.64, 1] }
-            }
-          >
+    <span
+      ref={ref}
+      className={`inline-flex flex-wrap items-center gap-x-1.5 gap-y-3 ${className}`}
+      aria-label={text}
+    >
+      {letters.map((l) => {
+        if (l.ch === " ") {
+          return <span key={l.key} className="w-2.5 sm:w-3.5" aria-hidden="true" />;
+        }
+
+        const scrap = (
+          <>
             <span
               className="block px-2 py-1 font-bold leading-none"
               style={{
@@ -2117,9 +2312,50 @@ function RansomText({ text, className = "", baseSize = 1.6 }) {
                 }}
               />
             ) : null}
+          </>
+        );
+
+        if (scrollReveal && !reduce) {
+          const lp = easeOut(Math.min(1, Math.max(0, (p * (total + SPREAD) - l.key) / SPREAD)));
+          return (
+            <span
+              key={l.key}
+              aria-hidden="true"
+              className="relative inline-block"
+              style={{
+                opacity: lp,
+                transform: `translateY(${-22 + (l.yShift + 22) * lp}px) rotate(${
+                  l.rotate * 2.3 + (l.rotate - l.rotate * 2.3) * lp
+                }deg) scale(${0.44 + 0.56 * lp})`,
+                filter: "drop-shadow(2px 5px 4px rgba(0,0,0,0.55))",
+                willChange: "transform, opacity",
+              }}
+            >
+              {scrap}
+            </span>
+          );
+        }
+
+        return (
+          <motion.span
+            key={l.key}
+            aria-hidden="true"
+            className="relative inline-block"
+            style={{
+              filter: "drop-shadow(2px 5px 4px rgba(0,0,0,0.55))",
+              ...(reduce ? { transform: `rotate(${l.rotate}deg)` } : null),
+            }}
+            initial={reduce ? false : { opacity: 0, y: -18, rotate: l.rotate * 2.2, scale: 0.5 }}
+            whileInView={reduce ? undefined : { opacity: 1, y: l.yShift, rotate: l.rotate, scale: 1 }}
+            viewport={{ once: true, margin: "-12% 0px" }}
+            transition={
+              reduce ? undefined : { duration: 0.4, delay: l.key * 0.055, ease: [0.34, 1.56, 0.64, 1] }
+            }
+          >
+            {scrap}
           </motion.span>
-        ),
-      )}
+        );
+      })}
     </span>
   );
 }
@@ -3129,8 +3365,8 @@ export function InitiationFridayReportSection({ content }) {
   useEffect(() => {
     if (reduce || !playing) return undefined;
     const iv = window.setInterval(() => {
-      setProgress((p) => Math.min(1, p + 0.014));
-    }, 45);
+      setProgress((p) => Math.min(1, p + 0.006));
+    }, 60);
     return () => window.clearInterval(iv);
   }, [reduce, playing]);
 
@@ -3146,7 +3382,7 @@ export function InitiationFridayReportSection({ content }) {
     const t = window.setTimeout(() => {
       setProgress(0);
       setRewinding(false);
-    }, 1150);
+    }, 1600);
     return () => window.clearTimeout(t);
   }, [progress, mode, reduce, rewinding]);
 
@@ -3510,16 +3746,27 @@ const MEMORY_METERS = {
 export function InitiationCompoundingIntelligenceSection({ content }) {
   const reduce = useReducedMotion();
   const sectionRef = useRef(null);
-  // Tight window so the lattice finishes building while it's still front-and-
-  // center — growth completes by the time the section top reaches ~30% of the
-  // viewport, instead of being smeared across two full screens of scroll.
-  const { scrollYProgress } = useScroll({ target: sectionRef, offset: ["start 88%", "start 30%"] });
+  // The lattice wires itself together once the graph scrolls into view — a single
+  // ~2.8s eased build so it always completes on screen, instead of being tied to
+  // scroll distance (which made it easy to scroll past and miss the completion).
+  const graphRef = useRef(null);
+  const inView = useInView(graphRef, { once: true, margin: "-18% 0px -18% 0px" });
   const [growth, setGrowth] = useState(reduce ? 1 : 0);
 
-  useMotionValueEvent(scrollYProgress, "change", (v) => {
-    if (reduce) return;
-    setGrowth(Math.min(1, Math.max(0, v)));
-  });
+  useEffect(() => {
+    if (reduce || !inView) return undefined;
+    const start = performance.now();
+    const dur = 2800;
+    let raf = 0;
+    const tick = (now) => {
+      const p = Math.min(1, (now - start) / dur);
+      const eased = 1 - Math.pow(1 - p, 3);
+      setGrowth(eased);
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [inView, reduce]);
 
   const learn = content.body.slice(2, 7);
   const nodesLinked = Math.round(growth * MEMORY_NODES.length);
@@ -3593,7 +3840,7 @@ export function InitiationCompoundingIntelligenceSection({ content }) {
             </div>
 
             <div>
-              <div className="relative aspect-square w-full overflow-hidden rounded-[1.5rem] border border-white/[0.07] bg-[#08090f]">
+              <div ref={graphRef} className="relative aspect-square w-full overflow-hidden rounded-[1.5rem] border border-white/[0.07] bg-[#08090f]">
                 <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 h-full w-full" aria-hidden="true">
                   {MEMORY_EDGES.map((e, i) => {
                     const a = Math.min(1, Math.max(0, growth * MEMORY_EDGES.length - i));
@@ -3707,11 +3954,18 @@ function mixColor(a, b, t) {
 }
 
 export function InitiationConfidenceModelSection({ content }) {
+  const reduce = useReducedMotion();
   const { mark } = useProgression();
   const [value, setValue] = useState(8);
   const marked = useRef(false);
   const trackRef = useRef(null);
   const dragging = useRef(false);
+  // Come-alive: the dial demonstrates itself once when scrolled into view, then
+  // hands control to the viewer the moment they touch it (so it never sits dead).
+  const dialRef = useRef(null);
+  const inView = useInView(dialRef, { once: true, margin: "-25% 0px -25% 0px" });
+  const touched = useRef(false);
+  const demoed = useRef(false);
 
   const t = value / 100;
   const ring = mixColor([219, 39, 119], [212, 168, 83], t);
@@ -3724,15 +3978,36 @@ export function InitiationConfidenceModelSection({ content }) {
     }
   }, [value, mark]);
 
+  useEffect(() => {
+    if (reduce || !inView || demoed.current || touched.current) return undefined;
+    demoed.current = true;
+    const target = 76;
+    const start = performance.now();
+    const from = 8;
+    const dur = 1900;
+    let raf = 0;
+    const tick = (now) => {
+      if (touched.current) return;
+      const p = Math.min(1, (now - start) / dur);
+      const eased = 1 - Math.pow(1 - p, 3);
+      setValue(Math.round(from + (target - from) * eased));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [inView, reduce]);
+
   function setFromClientX(cx) {
     const el = trackRef.current;
     if (!el) return;
+    touched.current = true;
     const r = el.getBoundingClientRect();
     setValue(Math.round(Math.min(1, Math.max(0, (cx - r.left) / r.width)) * 100));
   }
 
   function onPointerDown(e) {
     dragging.current = true;
+    touched.current = true;
     if (e.currentTarget.setPointerCapture) e.currentTarget.setPointerCapture(e.pointerId);
     setFromClientX(e.clientX);
   }
@@ -3747,9 +4022,11 @@ export function InitiationConfidenceModelSection({ content }) {
 
   function onKeyDown(e) {
     if (e.key === "ArrowRight" || e.key === "ArrowUp") {
+      touched.current = true;
       setValue((v) => Math.min(100, v + 4));
       e.preventDefault();
     } else if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
+      touched.current = true;
       setValue((v) => Math.max(0, v - 4));
       e.preventDefault();
     }
@@ -3793,7 +4070,7 @@ export function InitiationConfidenceModelSection({ content }) {
               </div>
 
               <AnimatePresence>
-                {value >= 70 ? (
+                {value >= 66 ? (
                   <motion.p
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -3806,7 +4083,7 @@ export function InitiationConfidenceModelSection({ content }) {
               </AnimatePresence>
             </div>
 
-            <div className="rounded-[1.75rem] border border-white/[0.07] bg-[#08090f] p-7 sm:p-9">
+            <div ref={dialRef} className="rounded-[1.75rem] border border-white/[0.07] bg-[#08090f] p-7 sm:p-9">
               <div className="relative mx-auto aspect-square w-full max-w-[18rem]">
                 <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90" aria-hidden="true">
                   <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="5" />
@@ -3942,7 +4219,7 @@ export function InitiationFivePillarsSection({ content }) {
 
   useEffect(() => {
     if (reduce || !inView) return undefined;
-    const timer = window.setInterval(() => spawn(false), 950);
+    const timer = window.setInterval(() => spawn(false), 1600);
     return () => window.clearInterval(timer);
   }, [reduce, inView, spawn]);
 
@@ -4212,12 +4489,12 @@ function RisingMotes({ reduce }) {
 export function InitiationOperationalDiagnosticSection({ content }) {
   const reduce = useReducedMotion();
   const ref = useRef(null);
-  const inView = useInView(ref, { once: true, margin: "-20% 0px" });
+  const inView = useInView(ref, { once: true, margin: "-30% 0px -15% 0px" });
   const [scan, setScan] = useState(reduce ? content.bullets.length : 0);
 
   useEffect(() => {
     if (reduce || !inView || scan >= content.bullets.length) return undefined;
-    const t = window.setTimeout(() => setScan((n) => n + 1), 300);
+    const t = window.setTimeout(() => setScan((n) => n + 1), 460);
     return () => window.clearTimeout(t);
   }, [inView, scan, reduce, content.bullets.length]);
 
@@ -4450,9 +4727,16 @@ export function InitiationEntryPathsSection({ content }) {
                   />
 
                   <div className="relative">
-                    <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.26em] text-[#8A6A1F]">
-                      {card.headline}
-                    </p>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                      <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.26em] text-[#8A6A1F]">
+                        {card.headline}
+                      </p>
+                      {card.tag ? (
+                        <span className="inline-flex items-center rounded-full border border-[#8A6A1F]/30 bg-[#8A6A1F]/[0.06] px-2.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.16em] text-[#8A6A1F]">
+                          {card.tag}
+                        </span>
+                      ) : null}
+                    </div>
                     <h3 className="mt-4 text-xl font-semibold tracking-[-0.02em] text-[#0B0B0C] sm:text-2xl">
                       {card.subheadline}
                     </h3>
@@ -4465,6 +4749,22 @@ export function InitiationEntryPathsSection({ content }) {
                     </div>
                     <p className="mt-6 text-sm font-semibold text-[#8A6A1F]">Best for:</p>
                     <p className="mt-2 text-sm leading-7 text-[#3A352C]">{card.bestFor}</p>
+                    {card.cta ? (
+                      <Link
+                        href={card.ctaTarget}
+                        onClick={(event) => event.stopPropagation()}
+                        className={
+                          i === 0
+                            ? "mt-7 inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full bg-[#0B0B0C] px-6 py-3 text-sm font-semibold text-[#F4F1EA] transition hover:bg-black"
+                            : "mt-7 inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full border border-[#0B0B0C]/25 px-6 py-3 text-sm font-semibold text-[#0B0B0C] transition hover:bg-black/5"
+                        }
+                      >
+                        {card.cta}
+                        <span className="transition-transform duration-300 group-hover:translate-x-1" aria-hidden="true">
+                          →
+                        </span>
+                      </Link>
+                    ) : null}
                   </div>
                 </motion.article>
               );

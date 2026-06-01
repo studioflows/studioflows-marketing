@@ -1,3 +1,13 @@
+// ── CTA destinations ─────────────────────────────────────────────────────────
+// Single source of truth for where every homepage CTA points. Swap these two
+// values with the StudioFlows OS tenant redirect links so leads + appointments
+// land inside the OS account:
+//   OS_DIAGNOSTIC_URL  → the OS quiz funnel / booking flow (every "diagnostic" CTA)
+//   VESSA_WAITLIST_URL → the OS Vessa invitation / waitlist flow
+// Interim values keep the on-site routes working until the OS links are provided.
+const OS_DIAGNOSTIC_URL = "/apply";
+const VESSA_WAITLIST_URL = "/vessa";
+
 export const INITIATION_HOMEPAGE_CONTENT = {
   hero: {
     eyebrow: "Execution Infrastructure for Founder-Led Service Businesses",
@@ -9,10 +19,10 @@ export const INITIATION_HOMEPAGE_CONTENT = {
       "Not because your team is lazy.",
       "Because the business still depends on human coordination to hold itself together.",
     ],
-    primaryCta: "See how the system works",
-    primaryCtaTarget: "#system",
-    secondaryCta: "Start the Operational Weight Diagnostic",
-    secondaryCtaTarget: "/apply",
+    primaryCta: "Start the Operational Weight Diagnostic",
+    primaryCtaTarget: OS_DIAGNOSTIC_URL,
+    secondaryCta: "See how the system works",
+    secondaryCtaTarget: "#system",
   },
   founderPain: {
     headline: "Somewhere along the way, you became the backup plan for everything.",
@@ -207,36 +217,41 @@ export const INITIATION_HOMEPAGE_CONTENT = {
       "whether the business needs StudioFlows IQ, StudioFlows OS, or both",
     ],
     cta: "Start the Operational Weight Diagnostic",
-    ctaTarget: "/apply",
+    ctaTarget: OS_DIAGNOSTIC_URL,
   },
   entryPaths: {
     headline: "One story. Two ways in.",
     body: [
       "StudioFlows does not force every business into the same starting point.",
-      "Some companies want intelligence over the systems they already use.",
-      "Others are ready to replace fragmented operations with a native operating layer.",
-      "The diagnostic points the business toward the right path.",
+      "Some are ready now to replace fragmented operations with a custom-built operating layer.",
+      "Others want first access to the intelligence layer as it opens — by invitation.",
+      "The diagnostic points you toward the right path.",
     ],
     card1: {
-      headline: "StudioFlows IQ",
-      subheadline: "Add compounding intelligence without replacing your stack.",
+      tag: "Available now · custom build",
+      headline: "StudioFlows OS",
+      subheadline: "A native operating layer, built around your business.",
       body: [
-        "StudioFlows IQ works over existing tools or inside StudioFlows OS.",
-        "It learns from workflows, decisions, escalations, delivery patterns, and business context over time.",
-        "Vessa is the operational execution surface inside StudioFlows IQ.",
+        "StudioFlows OS replaces fragmented tools with a purpose-built operational environment — jobs, workflows, scheduling, approvals, client portals, and lifecycle management in one connected system.",
+        "Today it is delivered as a custom build. We audit your operation, scope the system, and turn around a proposal.",
       ],
       bestFor:
-        "Founder-led businesses that want less manual coordination without replacing their entire software stack first.",
+        "Service businesses ready to install a cleaner operating backbone now, tailored to how they actually run.",
+      cta: "Start the diagnostic",
+      ctaTarget: OS_DIAGNOSTIC_URL,
     },
     card2: {
-      headline: "StudioFlows OS",
-      subheadline: "Install a native operating layer for the business.",
+      tag: "Invitation only · in development",
+      headline: "StudioFlows IQ",
+      subheadline: "Compounding operational intelligence, opening by invitation.",
       body: [
-        "StudioFlows OS replaces fragmented tools with a purpose-built operational environment for service businesses.",
-        "Jobs, workflows, scheduling, approvals, client portals, lifecycle management, and internal operations live in one connected execution system.",
+        "An intelligence layer that learns from your workflows, decisions, escalations, and delivery patterns over time.",
+        "Vessa, the execution surface inside StudioFlows IQ, is in private development and opening to a selective group first.",
       ],
       bestFor:
-        "Service businesses ready to move beyond scattered tools and install a cleaner operating backbone.",
+        "Founders who want first access when intelligent execution opens beyond custom builds.",
+      cta: "Request a Vessa invitation",
+      ctaTarget: VESSA_WAITLIST_URL,
     },
   },
   finalCta: {
@@ -247,8 +262,8 @@ export const INITIATION_HOMEPAGE_CONTENT = {
       "An execution system designed to remove operational weight over time.",
     ],
     primaryCta: "Start the Operational Weight Diagnostic",
-    primaryCtaTarget: "/apply",
-    secondaryCta: "See how the system works",
-    secondaryCtaTarget: "#system",
+    primaryCtaTarget: OS_DIAGNOSTIC_URL,
+    secondaryCta: "Request a Vessa invitation",
+    secondaryCtaTarget: VESSA_WAITLIST_URL,
   },
 } as const;

@@ -14,7 +14,6 @@ import {
   InitiationHeroSection,
   InitiationOperationalDiagnosticSection,
   InitiationStudioFlowsRevealSection,
-  LockedReveal,
   ProgressionProvider,
   SystemResetTransition,
 } from "@/components/home/InitiationHomeSections";
@@ -32,10 +31,7 @@ export default function HomePage() {
         <InitiationContinuityReframeSection content={C.continuityReframe} />
         <InitiationAICategorySection content={C.aiCategorySeparation} />
 
-        {/* You don't get to meet the system until you've confronted the pattern. */}
-        <LockedReveal minCount={2} code="vessa">
-          <InitiationStudioFlowsRevealSection content={C.studioFlowsReveal} />
-        </LockedReveal>
+        <InitiationStudioFlowsRevealSection content={C.studioFlowsReveal} />
 
         <InitiationFridayReportSection content={C.fridayReportSimulation} />
         <InitiationCompoundingIntelligenceSection content={C.compoundingIntelligence} />
@@ -45,10 +41,7 @@ export default function HomePage() {
         {/* THE TURN — the noir is killed and the page is reborn in light. */}
         <SystemResetTransition />
 
-        {/* The ask is earned, not given. Clearance must be logged first. */}
-        <LockedReveal minCount={3} code="diagnostic">
-          <InitiationOperationalDiagnosticSection content={C.operationalDiagnostic} />
-        </LockedReveal>
+        <InitiationOperationalDiagnosticSection content={C.operationalDiagnostic} />
 
         <InitiationEntryPathsSection content={C.entryPaths} />
         <InitiationFinalCtaSection content={C.finalCta} />
