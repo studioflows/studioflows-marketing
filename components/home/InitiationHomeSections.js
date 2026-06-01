@@ -2003,10 +2003,10 @@ function FounderCrtTv({ progressTarget }) {
       <motion.div style={{ y }} className="relative">
         <div className="relative aspect-[4/5] w-full overflow-hidden">
           <Image
-            src="/founder/crt-tv.png"
+            src="/founder/crt-tv.jpg"
             alt=""
             fill
-            sizes="(min-width: 1024px) 24vw, 0px"
+            sizes="(min-width: 1024px) 360px, 1px"
             className="select-none object-contain"
           />
 
