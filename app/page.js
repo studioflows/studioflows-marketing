@@ -1,19 +1,19 @@
 import { INITIATION_HOMEPAGE_CONTENT } from "@/lib/initiation-homepage-content";
 import {
   InitiationAICategorySection,
-  InitiationCompoundingIntelligenceSection,
-  InitiationConfidenceModelSection,
   InitiationContinuityReframeSection,
   InitiationDependencySelectorSection,
   InitiationEntryPathsSection,
   InitiationFinalCtaSection,
-  InitiationFivePillarsSection,
   InitiationFounderPainSection,
   InitiationFounderStorySection,
   InitiationFridayReportSection,
   InitiationHeroSection,
+  InitiationFoundingProgramSection,
   InitiationOperationalDiagnosticSection,
+  InitiationServiceLoopsSection,
   InitiationStudioFlowsRevealSection,
+  InitiationWhatYouGetSection,
   ProgressionProvider,
   SystemResetTransition,
 } from "@/components/home/InitiationHomeSections";
@@ -34,9 +34,9 @@ export default function HomePage() {
         <InitiationStudioFlowsRevealSection content={C.studioFlowsReveal} />
 
         <InitiationFridayReportSection content={C.fridayReportSimulation} />
-        <InitiationCompoundingIntelligenceSection content={C.compoundingIntelligence} />
-        <InitiationConfidenceModelSection content={C.confidenceModel} />
-        <InitiationFivePillarsSection content={C.fivePillars} />
+        <InitiationWhatYouGetSection content={C.whatYouGet} />
+        <InitiationFoundingProgramSection content={C.foundingProgram} />
+        <InitiationServiceLoopsSection content={C.serviceLoops} />
 
         {/* THE TURN — the noir is killed and the page is reborn in light. */}
         <SystemResetTransition />

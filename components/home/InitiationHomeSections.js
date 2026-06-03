@@ -2009,7 +2009,15 @@ function FounderCrtTv({ progressTarget }) {
             alt=""
             fill
             sizes="(min-width: 1024px) 360px, 1px"
-            className="select-none object-contain mix-blend-screen"
+            className="select-none object-contain"
+            style={{
+              // Feather the photo's dark surround into the page so there's no
+              // visible rectangle around the TV (no mix-blend trick needed).
+              WebkitMaskImage:
+                "radial-gradient(115% 115% at 50% 50%, #000 58%, transparent 90%)",
+              maskImage:
+                "radial-gradient(115% 115% at 50% 50%, #000 58%, transparent 90%)",
+            }}
           />
 
           {/* live screen */}
@@ -2934,11 +2942,11 @@ export function InitiationAICategorySection({ content }) {
                     <span className="h-2.5 w-2.5 rounded-full bg-[#FEBC2E]" />
                     <span className="h-2.5 w-2.5 rounded-full bg-[#28C840]" />
                     <span className="ml-3 font-mono text-[11px] uppercase tracking-[0.24em] text-black/45">
-                      ai assistant — live
+                      your tools — synced
                     </span>
                     <span className="ml-auto inline-flex items-center gap-2 rounded-full bg-[#28C840]/15 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-[#1c7a32]">
                       <span className="h-1.5 w-1.5 rounded-full bg-[#28C840]" />
-                      {allDone ? "handled" : "generating"}
+                      {allDone ? "all tracked" : "syncing"}
                     </span>
                   </div>
 
@@ -2995,7 +3003,7 @@ export function InitiationAICategorySection({ content }) {
                     </div>
                     <div className="mt-5 flex items-center justify-between gap-4">
                       <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-black/35">
-                        {allDone ? "[ applause ]" : "output generated"}
+                        {allDone ? "[ looks handled ]" : "tracking…"}
                       </p>
                       {allDone ? (
                         <motion.button
@@ -3352,7 +3360,9 @@ export function InitiationFridayReportSection({ content }) {
   const reduce = useReducedMotion();
   const { mark } = useProgression();
   const sectionRef = useRef(null);
-  const inView = useInView(sectionRef, { margin: "-15% 0px -15% 0px" });
+  // Fire only once the section is well into the viewport — so the tape starts
+  // "when you get here", not while it's still scrolling up from below.
+  const inView = useInView(sectionRef, { margin: "-35% 0px -35% 0px" });
   const trackRef = useRef(null);
   const dragging = useRef(false);
   const started = useRef(false);
@@ -3366,26 +3376,19 @@ export function InitiationFridayReportSection({ content }) {
   useEffect(() => {
     if (reduce || !playing) return undefined;
     const iv = window.setInterval(() => {
-      setProgress((p) => Math.min(1, p + 0.006));
+      setProgress((p) => Math.min(1, p + 0.00375));
     }, 60);
     return () => window.clearInterval(iv);
   }, [reduce, playing]);
 
-  // unaided: hold on "Again.", rewind to 0, loop. system: stop at the end.
+  // play once, then HOLD on the climax — no infinite loop. The visitor is left
+  // stuck on "Again." (or on the resolved system view) with the controls + the
+  // "Run it with StudioFlows" CTA to move forward at their own pace.
   useEffect(() => {
     if (reduce || progress < 1) return undefined;
-    if (mode === "system") {
-      setPlaying(false);
-      return undefined;
-    }
-    if (rewinding) return undefined;
-    setRewinding(true);
-    const t = window.setTimeout(() => {
-      setProgress(0);
-      setRewinding(false);
-    }, 1600);
-    return () => window.clearTimeout(t);
-  }, [progress, mode, reduce, rewinding]);
+    setPlaying(false);
+    return undefined;
+  }, [progress, reduce]);
 
   // come alive when scrolled into view
   useEffect(() => {
@@ -3432,8 +3435,9 @@ export function InitiationFridayReportSection({ content }) {
   const systemDone = isSystem && progress >= 0.98;
   const panic = !isSystem && progress >= 0.92;
 
-  // unaided narration tracks the slide toward the emergency
-  const unaidedCaption = progress < 0.6 ? content.body[1] : content.body[2];
+  // narration streams one short beat at a time as the tape advances
+  const unaidedBeat = content.unaidedBeats[Math.min(seen, content.unaidedBeats.length - 1)];
+  const systemBeat = content.systemBeats[Math.min(seen, content.systemBeats.length - 1)];
 
   return (
     <section
@@ -3448,7 +3452,7 @@ export function InitiationFridayReportSection({ content }) {
         <div className="relative mx-auto max-w-5xl px-5 sm:px-8">
           <div className="flex items-center gap-3">
             <p className="font-mono text-xs uppercase tracking-[0.3em] text-[#D4A853]/80">
-              07 / before the emergency
+              07 / before the scramble
             </p>
             <span className="h-px flex-1 bg-gradient-to-r from-[#D4A853]/30 to-transparent" />
           </div>
@@ -3459,7 +3463,7 @@ export function InitiationFridayReportSection({ content }) {
           >
             {content.headline}
           </h2>
-          <p className="mt-6 max-w-2xl text-base leading-8 text-[#C2BFBA] sm:text-[17px]">{content.body[0]}</p>
+          <p className="mt-6 max-w-2xl text-base leading-8 text-[#C2BFBA] sm:text-[17px]">{content.intro}</p>
 
           {/* THE TAPE */}
           <div
@@ -3496,9 +3500,9 @@ export function InitiationFridayReportSection({ content }) {
                   className="inline-block h-2 w-2 rounded-full"
                   style={{ backgroundColor: accent, boxShadow: `0 0 8px ${accent}` }}
                 />
-                {isSystem ? "studioflows" : "rec"} · thu {fridayTimecode(progress)}
+                {isSystem ? "studioflows" : "field crew"} · {fridayTimecode(progress)}
               </span>
-              <span className="text-[#9B9894]/70">delivery — fri 09:00</span>
+              <span className="text-[#9B9894]/70">job — 08:00 tomorrow</span>
             </div>
 
             {/* scene */}
@@ -3513,27 +3517,24 @@ export function InitiationFridayReportSection({ content }) {
                       exit={{ opacity: 0 }}
                       className="flex flex-col items-center justify-center text-center"
                     >
-                      <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-[#DB2777]/80">
-                        {content.body[2]}
-                      </p>
                       <motion.p
                         animate={reduce ? {} : { opacity: [1, 0.55, 1] }}
                         transition={{ duration: 1.1, repeat: Infinity }}
-                        className="mt-3 font-serif text-6xl font-semibold tracking-[-0.04em] text-[#DB2777] sm:text-8xl"
+                        className="font-serif text-6xl font-semibold tracking-[-0.04em] text-[#DB2777] sm:text-8xl"
                         style={{ textShadow: "0 0 40px rgba(219,39,119,0.45)" }}
                       >
-                        {content.body[3]}
+                        {content.panicLine}
                       </motion.p>
                     </motion.div>
                   ) : (
                     <motion.p
-                      key={unaidedCaption}
+                      key={unaidedBeat}
                       initial={reduce ? false : { opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0 }}
-                      className="max-w-2xl text-base leading-8 text-[#D8D4CE] sm:text-lg"
+                      className="max-w-2xl font-serif text-2xl font-semibold leading-snug tracking-[-0.02em] text-[#E8E4DE] sm:text-3xl"
                     >
-                      {unaidedCaption}
+                      {unaidedBeat}
                     </motion.p>
                   )}
                 </AnimatePresence>
@@ -3553,7 +3554,7 @@ export function InitiationFridayReportSection({ content }) {
                           transition={{ duration: 0.4 }}
                           className="font-serif text-2xl font-semibold leading-snug tracking-[-0.02em] text-[#F3EFEC] sm:text-3xl"
                         >
-                          {seen > 0 ? content.body[5 + Math.min(seen - 1, 5)] : content.body[4]}
+                          {systemBeat}
                         </motion.p>
                       </AnimatePresence>
                     </div>
@@ -3563,17 +3564,17 @@ export function InitiationFridayReportSection({ content }) {
                       animate={{ opacity: 1, y: 0 }}
                       className="mt-4"
                     >
-                      <p className="text-base leading-8 text-[#D8D4CE] sm:text-lg">{content.body[11]}</p>
-                      <p className="mt-2 text-base leading-8 text-[#D8D4CE] sm:text-lg">{content.body[12]}</p>
+                      <p className="text-base leading-8 text-[#D8D4CE] sm:text-lg">{content.systemResolve[0]}</p>
+                      <p className="mt-2 text-base leading-8 text-[#D8D4CE] sm:text-lg">{content.systemResolve[1]}</p>
                       <div className="mt-6 flex flex-wrap items-baseline gap-x-3">
                         <span className="font-serif text-2xl font-semibold tracking-[-0.025em] text-[#F3EFEC] sm:text-3xl">
-                          {content.body[13]}
+                          {content.closer.lead}
                         </span>
                         <span className="text-[#9B9894] line-through decoration-[#DB2777]/60">
-                          {content.body[14]}
+                          {content.closer.strike}
                         </span>
                         <span className="font-serif text-2xl font-semibold tracking-[-0.025em] text-[#D4A853] sm:text-3xl">
-                          {content.body[15]}
+                          {content.closer.gold}
                         </span>
                       </div>
                     </motion.div>
@@ -3621,7 +3622,7 @@ export function InitiationFridayReportSection({ content }) {
                 />
               </div>
               <p className="mt-1 text-center font-mono text-[9px] uppercase tracking-[0.3em] text-[#9B9894]/50">
-                {isSystem ? content.microInteraction2.title : "thursday night — unaided"}
+                {isSystem ? content.scrubLabelSystem : content.scrubLabelUnaided}
               </p>
 
               {isSystem ? (
@@ -3743,6 +3744,785 @@ const MEMORY_METERS = {
   "Coordination friction drops": "down",
   "Operational trust increases": "up",
 };
+
+// Line-icon set for the "what you get" feature lattice. Every stroke is a motion
+// primitive that redraws itself on hover (driven by the parent svg's variant
+// state), so the whole icon "writes itself" when the card lights up.
+const FEATURE_ICON_DRAW = {
+  rest: { pathLength: 1, opacity: 1 },
+  draw: { pathLength: [0, 1], opacity: [0.25, 1] },
+};
+
+function FeatureIcon({ name, active, reduce }) {
+  const p = {
+    variants: FEATURE_ICON_DRAW,
+    transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] },
+  };
+  const glyphs = {
+    jobs: (
+      <>
+        <motion.rect x="5" y="4" width="14" height="17" rx="2" {...p} />
+        <motion.rect x="9" y="2.5" width="6" height="3" rx="1" {...p} />
+        <motion.line x1="9" y1="11" x2="15" y2="11" {...p} />
+        <motion.line x1="9" y1="15" x2="15" y2="15" {...p} />
+      </>
+    ),
+    calendar: (
+      <>
+        <motion.rect x="3" y="4.5" width="18" height="16" rx="2" {...p} />
+        <motion.line x1="3" y1="9" x2="21" y2="9" {...p} />
+        <motion.line x1="8" y1="2.5" x2="8" y2="6" {...p} />
+        <motion.line x1="16" y1="2.5" x2="16" y2="6" {...p} />
+        <motion.line x1="11" y1="13.5" x2="13" y2="13.5" {...p} />
+      </>
+    ),
+    records: (
+      <>
+        <motion.rect x="3" y="5" width="18" height="14" rx="2" {...p} />
+        <motion.circle cx="8" cy="11" r="2.1" {...p} />
+        <motion.path d="M5 16.2 a3 3 0 0 1 6 0" {...p} />
+        <motion.line x1="14" y1="10" x2="18" y2="10" {...p} />
+        <motion.line x1="14" y1="14" x2="18" y2="14" {...p} />
+      </>
+    ),
+    team: (
+      <>
+        <motion.circle cx="9" cy="8" r="3" {...p} />
+        <motion.path d="M3 19 a6 6 0 0 1 12 0" {...p} />
+        <motion.path d="M16 5.4 a3 3 0 0 1 0 5.2" {...p} />
+        <motion.path d="M17.2 14.2 a6 6 0 0 1 3.8 4.8" {...p} />
+      </>
+    ),
+    mobile: (
+      <>
+        <motion.rect x="7" y="2.5" width="10" height="19" rx="2.5" {...p} />
+        <motion.line x1="11" y1="18.5" x2="13" y2="18.5" {...p} />
+      </>
+    ),
+    files: (
+      <>
+        <motion.path d="M14 3 H7 a1 1 0 0 0 -1 1 v16 a1 1 0 0 0 1 1 h10 a1 1 0 0 0 1 -1 V7 z" {...p} />
+        <motion.path d="M14 3 v4 h4" {...p} />
+        <motion.line x1="9.5" y1="13" x2="14.5" y2="13" {...p} />
+        <motion.line x1="9.5" y1="16.5" x2="14.5" y2="16.5" {...p} />
+      </>
+    ),
+    portal: (
+      <>
+        <motion.circle cx="12" cy="12" r="9" {...p} />
+        <motion.line x1="3" y1="12" x2="21" y2="12" {...p} />
+        <motion.path d="M12 3 c4 4 4 14 0 18 c-4 -4 -4 -14 0 -18" {...p} />
+      </>
+    ),
+    payments: (
+      <>
+        <motion.rect x="3" y="6" width="18" height="12" rx="2" {...p} />
+        <motion.line x1="3" y1="10" x2="21" y2="10" {...p} />
+        <motion.line x1="7" y1="14.5" x2="11" y2="14.5" {...p} />
+      </>
+    ),
+    timeline: (
+      <>
+        <motion.path d="M2 12 h4 l2 -6 l3 12 l2 -8 l2 4 h5" {...p} />
+      </>
+    ),
+    dashboard: (
+      <>
+        <motion.rect x="4" y="4" width="7" height="7" rx="1.5" {...p} />
+        <motion.rect x="13" y="4" width="7" height="4" rx="1.5" {...p} />
+        <motion.rect x="13" y="11" width="7" height="9" rx="1.5" {...p} />
+        <motion.rect x="4" y="14" width="7" height="6" rx="1.5" {...p} />
+      </>
+    ),
+  };
+
+  return (
+    <motion.svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-5 w-5"
+      initial="rest"
+      animate={active && !reduce ? "draw" : "rest"}
+      aria-hidden="true"
+    >
+      {glyphs[name] ?? glyphs.dashboard}
+    </motion.svg>
+  );
+}
+
+function FeatureCard({ feature, index, reduce }) {
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <motion.li
+      onHoverStart={() => setHovered(true)}
+      onHoverEnd={() => setHovered(false)}
+      initial={reduce ? false : { opacity: 0, y: 14 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-12% 0px" }}
+      transition={{ duration: reduce ? 0 : 0.5, delay: reduce ? 0 : index * 0.04, ease: [0.16, 1, 0.3, 1] }}
+      whileHover={reduce ? undefined : { y: -4 }}
+      className="group flex items-start gap-3.5 rounded-xl border border-white/[0.07] bg-white/[0.02] px-4 py-3.5 transition-colors duration-300 hover:border-[#60A5FA]/30 hover:bg-[#60A5FA]/[0.04]"
+    >
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-[#60A5FA] transition-all duration-300 group-hover:scale-[1.07] group-hover:border-[#60A5FA]/45 group-hover:bg-[#60A5FA]/10 group-hover:text-[#9FC3F5] group-hover:shadow-[0_0_22px_rgba(96,165,250,0.3)]">
+        <FeatureIcon name={feature.icon} active={hovered} reduce={reduce} />
+      </span>
+      <span>
+        <span className="block text-[15px] font-semibold tracking-[-0.01em] text-[#EDEBE8]">
+          {feature.name}
+        </span>
+        <span className="mt-0.5 block text-[13px] leading-6 text-[#8E8B87]">
+          {feature.blurb}
+        </span>
+      </span>
+    </motion.li>
+  );
+}
+
+function MagnifyGlyph() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="10.5" cy="10.5" r="6.5" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M15.5 15.5 L21 21" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M10.5 7.5 V13.5 M7.5 10.5 H13.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// Mobile-first magnifier. Tap any screenshot to open a full-screen viewer; tap the
+// image to zoom 2.4x, then drag (pointer/touch) to pan. Arrows/Esc on desktop,
+// swipe-friendly buttons on mobile. Reduced-motion safe.
+function ProductLightbox({ state, onClose, onNavigate }) {
+  const reduce = useReducedMotion();
+  const [zoom, setZoom] = useState(false);
+  const [origin, setOrigin] = useState({ x: 50, y: 50 });
+
+  const open = Boolean(state);
+  const item = state ? state.items[state.index] : null;
+  const count = state ? state.items.length : 0;
+
+  useEffect(() => {
+    setZoom(false);
+    setOrigin({ x: 50, y: 50 });
+  }, [state?.index, open]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKey = (e) => {
+      if (e.key === "Escape") onClose();
+      else if (e.key === "ArrowRight") onNavigate(1);
+      else if (e.key === "ArrowLeft") onNavigate(-1);
+    };
+    window.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [open, onClose, onNavigate]);
+
+  function handlePointerMove(e) {
+    if (!zoom) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - r.left) / r.width) * 100;
+    const y = ((e.clientY - r.top) / r.height) * 100;
+    setOrigin({
+      x: Math.min(100, Math.max(0, x)),
+      y: Math.min(100, Math.max(0, y)),
+    });
+  }
+
+  const stop = (e) => e.stopPropagation();
+
+  return (
+    <AnimatePresence>
+      {open ? (
+        <motion.div
+          className="fixed inset-0 z-[95] flex flex-col bg-black/92 backdrop-blur-md"
+          initial={reduce ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          role="dialog"
+          aria-modal="true"
+          aria-label={item?.label ? `${item.label} — enlarged` : "Enlarged screenshot"}
+          onClick={onClose}
+        >
+          <div
+            className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6"
+            onClick={stop}
+          >
+            <span className="font-mono text-[11px] uppercase tracking-[0.22em] text-[#60A5FA]/80">
+              {item?.label}
+            </span>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/15 text-lg text-[#E8E6E3] transition hover:bg-white/10"
+            >
+              ✕
+            </button>
+          </div>
+
+          <div className="relative flex-1 overflow-hidden px-3 sm:px-6">
+            <div
+              className="relative mx-auto h-full w-full max-w-5xl select-none"
+              style={{ cursor: zoom ? "zoom-out" : "zoom-in", touchAction: "none" }}
+              onClick={(e) => {
+                stop(e);
+                setZoom((z) => !z);
+                handlePointerMove(e);
+              }}
+              onPointerMove={handlePointerMove}
+            >
+              <motion.div
+                className="relative h-full w-full"
+                animate={{ scale: zoom ? 2.4 : 1 }}
+                transition={{ duration: reduce ? 0 : 0.25, ease: [0.16, 1, 0.3, 1] }}
+                style={{ transformOrigin: `${origin.x}% ${origin.y}%` }}
+              >
+                {item ? (
+                  <Image
+                    src={item.src}
+                    alt={item.label ? `StudioFlows — ${item.label}` : "StudioFlows screenshot"}
+                    fill
+                    sizes="100vw"
+                    className="object-contain"
+                    priority
+                  />
+                ) : null}
+              </motion.div>
+            </div>
+          </div>
+
+          <div className="px-4 py-4 sm:px-6" onClick={stop}>
+            {item?.caption ? (
+              <p className="mx-auto max-w-3xl text-center text-[13px] leading-6 text-[#C2BFBA]">
+                {item.caption}
+              </p>
+            ) : null}
+            <div className="mt-3 flex items-center justify-center gap-5">
+              {count > 1 ? (
+                <button
+                  type="button"
+                  onClick={() => onNavigate(-1)}
+                  aria-label="Previous screenshot"
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/15 text-[#E8E6E3] transition hover:bg-white/10"
+                >
+                  ‹
+                </button>
+              ) : null}
+              <span className="font-mono text-[11px] tracking-[0.2em] text-[#9B9894]">
+                {count > 1
+                  ? `${String(state.index + 1).padStart(2, "0")} / ${String(count).padStart(2, "0")}`
+                  : "tap image to magnify"}
+              </span>
+              {count > 1 ? (
+                <button
+                  type="button"
+                  onClick={() => onNavigate(1)}
+                  aria-label="Next screenshot"
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/15 text-[#E8E6E3] transition hover:bg-white/10"
+                >
+                  ›
+                </button>
+              ) : null}
+            </div>
+            <p className="mt-2 text-center font-mono text-[10px] uppercase tracking-[0.24em] text-[#9B9894]/50">
+              {zoom ? "drag to pan · tap to shrink" : "tap image to magnify"}
+            </p>
+          </div>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
+  );
+}
+
+// ── 08 WHAT YOU GET · the product surfaces (DARK) ────────────────────────────
+// The concrete StudioFlows OS. Feature lattice + real product screenshots framed
+// like a live operator console. Noir, but the first time the page shows the
+// product itself — proof, not promise.
+export function InitiationWhatYouGetSection({ content }) {
+  const reduce = useReducedMotion();
+  const sectionRef = useRef(null);
+  const drift = useParallaxValue(sectionRef, reduce ? 0 : 26, reduce ? 0 : -26);
+  const accent = "#60A5FA";
+
+  const [lightbox, setLightbox] = useState(null);
+  const openLightbox = useCallback((items, index) => setLightbox({ items, index }), []);
+  const navigateLightbox = useCallback(
+    (dir) =>
+      setLightbox((s) =>
+        s ? { ...s, index: (s.index + dir + s.items.length) % s.items.length } : s
+      ),
+    []
+  );
+
+  return (
+    <section
+      ref={sectionRef}
+      aria-labelledby="initiation-what-you-get-heading"
+      className="relative z-10 scroll-mt-24 overflow-hidden bg-[#0B0B12] py-24 sm:py-28 lg:py-32"
+    >
+      <SectionBleed />
+      <SectionGlitchOverlay accent={accent} variant="terminal" />
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(60% 50% at 50% 18%, rgba(96,165,250,0.08), transparent 62%)",
+        }}
+        aria-hidden="true"
+      />
+
+      <RevealSection>
+        <div className="relative mx-auto max-w-6xl px-5 sm:px-8">
+          <div className="flex items-center gap-3">
+            <p className="font-mono text-xs uppercase tracking-[0.3em] text-[#60A5FA]/80">
+              08 / what you get
+            </p>
+            <span className="h-px flex-1 bg-gradient-to-r from-[#60A5FA]/30 to-transparent" />
+          </div>
+
+          <h2
+            id="initiation-what-you-get-heading"
+            className="mt-6 max-w-4xl font-serif text-4xl font-semibold leading-[1.0] tracking-[-0.04em] text-[#F3EFEC] sm:text-5xl lg:text-6xl"
+          >
+            {content.headline}
+          </h2>
+          <p className="mt-6 max-w-2xl text-base leading-8 text-[#9B9894] sm:text-[17px]">
+            {content.intro}
+          </p>
+
+          <motion.ul style={{ y: drift }} className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
+            {content.features.map((feature, i) => (
+              <FeatureCard key={feature.name} feature={feature} index={i} reduce={reduce} />
+            ))}
+          </motion.ul>
+
+          <div className="mt-10 max-w-2xl space-y-1.5">
+            {content.body.map((line, i) => (
+              <p
+                key={line}
+                className={
+                  i === content.body.length - 1
+                    ? "font-serif text-xl font-semibold leading-snug tracking-[-0.02em] text-[#F3EFEC] sm:text-2xl"
+                    : "text-base leading-8 text-[#9B9894] sm:text-[17px]"
+                }
+              >
+                {line}
+              </p>
+            ))}
+          </div>
+
+          <p className="mt-14 font-mono text-[11px] uppercase tracking-[0.24em] text-[#60A5FA]/70">
+            {content.proofIntro}
+          </p>
+          <div className="mt-5 grid gap-5 sm:grid-cols-2">
+            {content.proof.map((shot, i) => (
+              <motion.figure
+                key={shot.src}
+                initial={reduce ? false : { opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-10% 0px" }}
+                transition={{ duration: reduce ? 0 : 0.6, delay: reduce ? 0 : i * 0.08, ease: [0.16, 1, 0.3, 1] }}
+                className="overflow-hidden rounded-2xl border border-white/10 bg-[#06060a] shadow-[0_30px_90px_rgba(0,0,0,0.55)]"
+              >
+                <button
+                  type="button"
+                  onClick={() => openLightbox(content.proof, i)}
+                  aria-label={`Enlarge ${shot.label} screenshot`}
+                  className="group/zoom block w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#60A5FA]/70"
+                >
+                  <div className="flex items-center gap-2 border-b border-white/[0.06] bg-white/[0.02] px-4 py-2.5">
+                    <span className="h-2.5 w-2.5 rounded-full bg-[#FF5F57]/80" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-[#FEBC2E]/80" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-[#28C840]/80" />
+                    <span className="ml-3 font-mono text-[10px] uppercase tracking-[0.22em] text-[#9B9894]/70">
+                      {shot.label}
+                    </span>
+                  </div>
+                  <div className="relative aspect-[16/9] w-full cursor-zoom-in overflow-hidden bg-[#0b0b12]">
+                    <Image
+                      src={shot.src}
+                      alt={`StudioFlows OS — ${shot.label}`}
+                      fill
+                      sizes="(min-width: 640px) 50vw, 100vw"
+                      className="object-cover object-top transition-transform duration-500 ease-out group-hover/zoom:scale-[1.04]"
+                    />
+                    <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover/zoom:opacity-100" />
+                    <span className="pointer-events-none absolute bottom-3 right-3 inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-black/55 text-[#E8E6E3] opacity-70 backdrop-blur-sm transition duration-300 group-hover/zoom:scale-110 group-hover/zoom:opacity-100">
+                      <MagnifyGlyph />
+                    </span>
+                  </div>
+                </button>
+                <figcaption className="px-4 py-3 text-[13px] leading-6 text-[#9B9894]">
+                  {shot.caption}
+                </figcaption>
+              </motion.figure>
+            ))}
+          </div>
+
+          {content.experience ? (
+            <>
+              <p className="mt-14 font-mono text-[11px] uppercase tracking-[0.24em] text-[#60A5FA]/70">
+                {content.experienceIntro}
+              </p>
+              <div className="mt-5 grid grid-cols-3 gap-3 sm:gap-6">
+                {content.experience.map((shot, i) => (
+                  <motion.figure
+                    key={shot.src}
+                    initial={reduce ? false : { opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: "-10% 0px" }}
+                    transition={{ duration: reduce ? 0 : 0.6, delay: reduce ? 0 : i * 0.1, ease: [0.16, 1, 0.3, 1] }}
+                    className="group"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => openLightbox(content.experience, i)}
+                      aria-label={`Enlarge ${shot.label} screen`}
+                      className="group/zoom relative block w-full overflow-hidden rounded-[1.25rem] border border-white/10 bg-[#06060a] p-1.5 shadow-[0_24px_70px_rgba(0,0,0,0.55)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#60A5FA]/70 sm:rounded-[1.75rem] sm:p-2"
+                    >
+                      <div className="relative aspect-[9/18] w-full cursor-zoom-in overflow-hidden rounded-[0.9rem] bg-[#0b0b12] sm:rounded-[1.25rem]">
+                        <Image
+                          src={shot.src}
+                          alt={`StudioFlows booking — ${shot.label}`}
+                          fill
+                          sizes="(min-width: 640px) 30vw, 33vw"
+                          className="object-cover object-top transition-transform duration-500 ease-out group-hover/zoom:scale-[1.05]"
+                        />
+                        <span className="pointer-events-none absolute bottom-2 right-2 inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-black/55 text-[#E8E6E3] opacity-70 backdrop-blur-sm transition duration-300 group-hover/zoom:scale-110 group-hover/zoom:opacity-100">
+                          <MagnifyGlyph />
+                        </span>
+                      </div>
+                    </button>
+                    <figcaption className="mt-3 px-0.5">
+                      <span className="block font-mono text-[10px] uppercase tracking-[0.22em] text-[#60A5FA]/80">
+                        {String(i + 1).padStart(2, "0")} · {shot.label}
+                      </span>
+                      <span className="mt-1 block text-[12px] leading-5 text-[#8E8B87] sm:text-[13px] sm:leading-6">
+                        {shot.caption}
+                      </span>
+                    </figcaption>
+                  </motion.figure>
+                ))}
+              </div>
+            </>
+          ) : null}
+        </div>
+      </RevealSection>
+
+      <ProductLightbox
+        state={lightbox}
+        onClose={() => setLightbox(null)}
+        onNavigate={navigateLightbox}
+      />
+    </section>
+  );
+}
+
+// ── 08.5 FOUNDING CUSTOMER PROGRAM · the offer (DARK) ─────────────────────────
+// Pricing made visible without a SaaS tier grid. One guided founding offer,
+// framed as a partnership — a ledger of terms, not a comparison table. Premium,
+// scarce, founder-led. Removes uncertainty; still sells the workflow review.
+export function InitiationFoundingProgramSection({ content }) {
+  const reduce = useReducedMotion();
+  const sectionRef = useRef(null);
+  const drift = useParallaxValue(sectionRef, reduce ? 0 : 22, reduce ? 0 : -22);
+  const accent = "#60A5FA";
+
+  return (
+    <section
+      ref={sectionRef}
+      aria-labelledby="initiation-founding-program-heading"
+      className="relative z-10 scroll-mt-24 overflow-hidden bg-[#09090f] py-24 sm:py-28 lg:py-32"
+    >
+      <SectionBleed />
+      <SectionGlitchOverlay accent={accent} variant="scanline" />
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(58% 48% at 50% 16%, rgba(96,165,250,0.07), transparent 62%)",
+        }}
+        aria-hidden="true"
+      />
+
+      <RevealSection>
+        <div className="relative mx-auto max-w-5xl px-5 sm:px-8">
+          <div className="flex items-center gap-3">
+            <p className="font-mono text-xs uppercase tracking-[0.3em] text-[#60A5FA]/80">
+              08.5 / founding customer program
+            </p>
+            <span className="h-px flex-1 bg-gradient-to-r from-[#60A5FA]/30 to-transparent" />
+          </div>
+
+          <div className="mt-7 inline-flex items-center gap-2.5 rounded-full border border-[#60A5FA]/25 bg-[#60A5FA]/[0.06] px-4 py-1.5">
+            <span className="relative flex h-1.5 w-1.5" aria-hidden="true">
+              {!reduce ? (
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#60A5FA]/60" />
+              ) : null}
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#60A5FA]" />
+            </span>
+            <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-[#9FC3F5]">
+              {content.availability}
+            </span>
+          </div>
+
+          <h2
+            id="initiation-founding-program-heading"
+            className="mt-6 max-w-3xl font-serif text-4xl font-semibold leading-[1.0] tracking-[-0.04em] text-[#F3EFEC] sm:text-5xl lg:text-[3.4rem]"
+          >
+            {content.headline}
+          </h2>
+          <div className="mt-6 max-w-2xl space-y-4">
+            {content.body.map((line) => (
+              <p key={line} className="text-base leading-8 text-[#9B9894] sm:text-[17px]">
+                {line}
+              </p>
+            ))}
+          </div>
+
+          {/* the offer — a ledger of terms, not a pricing tier */}
+          <motion.div
+            style={{ y: drift }}
+            className="mt-12 grid gap-px overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/[0.04] shadow-[0_40px_120px_rgba(0,0,0,0.55)] lg:grid-cols-[1.05fr_0.95fr]"
+          >
+            {/* terms ledger */}
+            <div className="relative bg-[#07070c] p-7 sm:p-9">
+              <div
+                className="pointer-events-none absolute inset-0 opacity-60"
+                style={{
+                  background:
+                    "radial-gradient(120% 80% at 0% 0%, rgba(96,165,250,0.08), transparent 55%)",
+                }}
+                aria-hidden="true"
+              />
+              <div className="relative">
+                <p className="font-mono text-[11px] uppercase tracking-[0.26em] text-[#60A5FA]/75">
+                  {content.programLabel}
+                </p>
+                <dl className="mt-6 divide-y divide-white/[0.07]">
+                  {content.terms.map((term, i) => {
+                    const isLast = i === content.terms.length - 1;
+                    return (
+                      <motion.div
+                        key={term.label}
+                        initial={reduce ? false : { opacity: 0, x: -8 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        viewport={{ once: true, margin: "-12% 0px" }}
+                        transition={{ duration: reduce ? 0 : 0.45, delay: reduce ? 0 : i * 0.1, ease: [0.16, 1, 0.3, 1] }}
+                        className="flex items-baseline justify-between gap-4 py-4"
+                      >
+                        <dt className="font-mono text-[11px] uppercase tracking-[0.2em] text-[#8E8B87]">
+                          {term.label}
+                        </dt>
+                        <dd
+                          className={
+                            isLast
+                              ? "font-serif text-3xl font-semibold tracking-[-0.03em] text-[#F3EFEC] sm:text-4xl"
+                              : "font-serif text-2xl font-semibold tracking-[-0.02em] text-[#D8D5D0] sm:text-[1.75rem]"
+                          }
+                        >
+                          {term.value}
+                          {isLast ? (
+                            <span className="ml-1 align-baseline font-mono text-[11px] font-normal uppercase tracking-[0.18em] text-[#8E8B87]">
+                              /mo
+                            </span>
+                          ) : null}
+                        </dd>
+                      </motion.div>
+                    );
+                  })}
+                </dl>
+                <div className="mt-6 flex items-start gap-2.5 rounded-xl border border-[#60A5FA]/15 bg-[#60A5FA]/[0.04] px-4 py-3">
+                  <span className="mt-0.5 font-mono text-[12px] text-[#60A5FA]/80" aria-hidden="true">
+                    ✶
+                  </span>
+                  <p className="text-[13px] leading-6 text-[#9FC3F5]">{content.lockNote}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* what's included + partnership framing */}
+            <div className="bg-[#0b0b12] p-7 sm:p-9">
+              <p className="font-mono text-[11px] uppercase tracking-[0.26em] text-[#60A5FA]/75">
+                What it includes
+              </p>
+              <ul className="mt-6 space-y-3">
+                {content.included.map((item, i) => (
+                  <motion.li
+                    key={item}
+                    initial={reduce ? false : { opacity: 0, y: 10 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: "-10% 0px" }}
+                    transition={{ duration: reduce ? 0 : 0.45, delay: reduce ? 0 : i * 0.07, ease: [0.16, 1, 0.3, 1] }}
+                    className="flex items-start gap-3"
+                  >
+                    <span
+                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#60A5FA]"
+                      style={{ boxShadow: "0 0 8px rgba(96,165,250,0.7)" }}
+                      aria-hidden="true"
+                    />
+                    <span className="text-[15px] leading-7 text-[#D8D5D0]">{item}</span>
+                  </motion.li>
+                ))}
+              </ul>
+              <div className="mt-7 space-y-3 border-t border-white/[0.07] pt-6">
+                {content.supporting.map((line, i) => (
+                  <p
+                    key={line}
+                    className={
+                      i === 0
+                        ? "text-[15px] font-semibold leading-7 text-[#EDEBE8]"
+                        : "text-[14px] leading-7 text-[#9B9894]"
+                    }
+                  >
+                    {line}
+                  </p>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+
+          <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Link
+              href={content.primaryCtaTarget}
+              className="group inline-flex min-h-[52px] items-center justify-center gap-2 rounded-full bg-[#F3EFEC] px-8 py-3.5 text-sm font-semibold tracking-wide text-[#0B0B0C] transition hover:bg-white"
+            >
+              {content.primaryCta}
+              <span className="transition-transform duration-300 group-hover:translate-x-1" aria-hidden="true">
+                →
+              </span>
+            </Link>
+            <Link
+              href={content.secondaryCtaTarget}
+              className="inline-flex min-h-[52px] items-center justify-center rounded-full border border-white/20 px-8 py-3.5 text-sm font-semibold text-[#E8E6E3] transition hover:border-white/40 hover:bg-white/[0.04]"
+            >
+              {content.secondaryCta}
+            </Link>
+          </div>
+        </div>
+      </RevealSection>
+    </section>
+  );
+}
+
+// ── 09 BUILT FOR SERVICE LOOPS · the fit (DARK) ──────────────────────────────
+// ICP + the request→follow-up lifecycle as an animated chain. Tells the visitor,
+// fast, whether the product is for them — the qualifier before the diagnostic.
+export function InitiationServiceLoopsSection({ content }) {
+  const reduce = useReducedMotion();
+  const accent = "#60A5FA";
+
+  return (
+    <section
+      aria-labelledby="initiation-service-loops-heading"
+      className="relative z-10 scroll-mt-24 overflow-hidden bg-[#08080d] py-24 sm:py-28 lg:py-32"
+    >
+      <SectionBleed />
+      <SectionGlitchOverlay accent={accent} variant="wave" />
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(55% 45% at 50% 24%, rgba(96,165,250,0.07), transparent 60%)",
+        }}
+        aria-hidden="true"
+      />
+
+      <RevealSection>
+        <div className="relative mx-auto max-w-5xl px-5 sm:px-8">
+          <div className="flex items-center gap-3">
+            <p className="font-mono text-xs uppercase tracking-[0.3em] text-[#60A5FA]/80">
+              09 / built for service loops
+            </p>
+            <span className="h-px flex-1 bg-gradient-to-r from-[#60A5FA]/30 to-transparent" />
+          </div>
+
+          <h2
+            id="initiation-service-loops-heading"
+            className="mt-6 max-w-4xl font-serif text-4xl font-semibold leading-[1.0] tracking-[-0.04em] text-[#F3EFEC] sm:text-5xl lg:text-6xl"
+          >
+            {content.headline}
+          </h2>
+          <div className="mt-6 max-w-2xl space-y-4">
+            {content.body.map((line) => (
+              <p key={line} className="text-base leading-8 text-[#9B9894] sm:text-[17px]">
+                {line}
+              </p>
+            ))}
+          </div>
+
+          <p className="mt-14 font-mono text-[11px] uppercase tracking-[0.24em] text-[#60A5FA]/70">
+            {content.lifecycleIntro}
+          </p>
+          <ol className="mt-5 flex flex-wrap items-center gap-x-2 gap-y-3">
+            {content.lifecycle.map((step, i) => (
+              <li key={step} className="flex items-center gap-2">
+                <motion.span
+                  initial={reduce ? false : { opacity: 0, y: 8 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-10% 0px" }}
+                  transition={{ duration: reduce ? 0 : 0.45, delay: reduce ? 0 : i * 0.12, ease: [0.16, 1, 0.3, 1] }}
+                  className="inline-flex items-center rounded-full border border-[#60A5FA]/25 bg-[#60A5FA]/[0.06] px-4 py-2 text-sm font-semibold tracking-[-0.01em] text-[#EDEBE8]"
+                >
+                  {step}
+                </motion.span>
+                {i < content.lifecycle.length - 1 ? (
+                  <motion.span
+                    aria-hidden="true"
+                    initial={reduce ? false : { opacity: 0 }}
+                    whileInView={{ opacity: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: reduce ? 0 : 0.4, delay: reduce ? 0 : i * 0.12 + 0.1 }}
+                    className="font-mono text-[#60A5FA]/60"
+                  >
+                    →
+                  </motion.span>
+                ) : null}
+              </li>
+            ))}
+          </ol>
+
+          <p className="mt-14 font-mono text-[11px] uppercase tracking-[0.24em] text-[#60A5FA]/70">
+            {content.fitIntro}
+          </p>
+          <ul className="mt-5 flex flex-wrap gap-2.5">
+            {content.fitExamples.map((example, i) => (
+              <motion.li
+                key={example}
+                initial={reduce ? false : { opacity: 0, scale: 0.96 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true, margin: "-8% 0px" }}
+                transition={{ duration: reduce ? 0 : 0.4, delay: reduce ? 0 : i * 0.05 }}
+                className="rounded-lg border border-white/[0.08] bg-white/[0.02] px-3.5 py-2 text-sm text-[#C2BFBA]"
+              >
+                {example}
+              </motion.li>
+            ))}
+          </ul>
+
+          <div className="mt-12 border-l-2 border-[#60A5FA]/50 pl-6">
+            <RevealLine
+              as="p"
+              className="max-w-2xl font-serif text-2xl font-semibold leading-snug tracking-[-0.025em] text-[#F3EFEC] sm:text-3xl"
+            >
+              {content.qualifier}
+            </RevealLine>
+          </div>
+        </div>
+      </RevealSection>
+    </section>
+  );
+}
 
 export function InitiationCompoundingIntelligenceSection({ content }) {
   const reduce = useReducedMotion();
