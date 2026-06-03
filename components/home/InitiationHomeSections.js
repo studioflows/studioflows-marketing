@@ -300,7 +300,7 @@ function HeroForceField({ progress }) {
           x: reduce ? 0 : farX,
           y: reduce ? 0 : farY,
           background:
-            "radial-gradient(circle at 50% 50%, rgba(59,130,246,0.13) 0%, rgba(59,130,246,0.05) 42%, transparent 70%)",
+            "radial-gradient(circle at 50% 50%, rgba(219,39,119,0.13) 0%, rgba(219,39,119,0.05) 42%, transparent 70%)",
         }}
         animate={reduce ? undefined : { opacity: [0.55, 0.85, 0.55] }}
         transition={
@@ -348,7 +348,7 @@ function HeroForceField({ progress }) {
         className="absolute left-[9%] top-[18%] hidden h-[46%] w-px lg:block"
         style={{
           background:
-            "linear-gradient(180deg, transparent 0%, rgba(59,130,246,0.16) 50%, transparent 100%)",
+            "linear-gradient(180deg, transparent 0%, rgba(219,39,119,0.16) 50%, transparent 100%)",
         }}
         initial={reduce ? false : { opacity: 0 }}
         animate={reduce ? undefined : { opacity: [0, 0.7, 0.4, 0.7] }}
@@ -1220,7 +1220,7 @@ export function InitiationFounderPainSection({ content }) {
         className="pointer-events-none absolute left-[10%] top-[52%] z-0 h-[42vh] w-[42vh] rounded-full blur-[120px]"
         style={{
           y: reduce ? 0 : deepY,
-          background: "radial-gradient(circle, rgba(96,165,250,0.10), transparent 70%)",
+          background: "radial-gradient(circle, rgba(212,168,83,0.10), transparent 70%)",
         }}
         aria-hidden="true"
       />
@@ -2113,7 +2113,7 @@ export function InitiationFounderStorySection({ content }) {
     >
       <SectionBleed />
       <div
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_24%,rgba(219,39,119,0.08),transparent_30%),radial-gradient(circle_at_82%_72%,rgba(96,165,250,0.05),transparent_32%)]"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_24%,rgba(219,39,119,0.08),transparent_30%),radial-gradient(circle_at_82%_72%,rgba(212,168,83,0.05),transparent_32%)]"
         aria-hidden="true"
       />
 
@@ -2377,14 +2377,14 @@ function RansomText({ text, className = "", baseSize = 1.6, scrollReveal = false
 
   ACT I · THE WEIGHT (near-black, magenta pressure) — dig the pain.
     Hero · 01 Recognition · 02 Mirror · 03 Confession
-  ACT II · THE TURN (black, blue intelligence + first amber) — the reveal.
+  ACT II · THE TURN (black, amber intelligence + first amber) — the reveal.
     04 Reframe · 05 Category · 06 System appears (eyes / light pivot)
   ACT III · LIGHTER TO OPERATE (graphite warming to bone) — proof → relief.
     07 Friday · 08 Compounding · 09 Confidence · 10 Pillars
     11 Diagnostic · 12 Entry · 13 Final CTA (full light payoff)
 
-  Accent language: magenta #DB2777 = pressure · blue #60A5FA = intelligence
-  · amber #D4A853 = the system / truth / relief.
+  Accent language: magenta #DB2777 = pressure
+  · amber #D4A853 = intelligence / the system / truth / relief.
   ───────────────────────────────────────────────────────────────────────────
 */
 
@@ -2866,7 +2866,7 @@ export function InitiationAICategorySection({ content }) {
     mark("category");
   }
 
-  const accent = killed ? "#DB2777" : "#60A5FA";
+  const accent = killed ? "#DB2777" : "#D4A853";
 
   return (
     <section
@@ -2881,7 +2881,7 @@ export function InitiationAICategorySection({ content }) {
         style={{
           background: killed
             ? "radial-gradient(60% 50% at 50% 30%, rgba(219,39,119,0.09), transparent 62%)"
-            : "radial-gradient(60% 50% at 50% 22%, rgba(96,165,250,0.08), transparent 62%)",
+            : "radial-gradient(60% 50% at 50% 22%, rgba(212,168,83,0.08), transparent 62%)",
         }}
         aria-hidden="true"
       />
@@ -2891,7 +2891,7 @@ export function InitiationAICategorySection({ content }) {
           <div className="flex items-center gap-3">
             <p
               className="font-mono text-xs uppercase tracking-[0.3em] transition-colors duration-500"
-              style={{ color: killed ? "rgba(219,39,119,0.8)" : "rgba(96,165,250,0.8)" }}
+              style={{ color: killed ? "rgba(219,39,119,0.8)" : "rgba(212,168,83,0.8)" }}
             >
               05 / category break
             </p>
@@ -2899,7 +2899,7 @@ export function InitiationAICategorySection({ content }) {
               className="h-px flex-1 transition-[background] duration-500"
               style={{
                 background: `linear-gradient(to right, ${
-                  killed ? "rgba(219,39,119,0.3)" : "rgba(96,165,250,0.3)"
+                  killed ? "rgba(219,39,119,0.3)" : "rgba(212,168,83,0.3)"
                 }, transparent)`,
               }}
             />
@@ -3218,12 +3218,20 @@ function DreamLine({ as = "p", id, className, children, index = 0, reduce, glow 
 
 export function InitiationStudioFlowsRevealSection({ content }) {
   const reduce = useReducedMotion();
+  const sectionRef = useRef(null);
   const stageRef = useRef(null);
   // offset start/start → end/end maps progress 0→1 to EXACTLY the window the
   // sticky stage is pinned to the screen, so the whole fade + parallax happens
   // in place (not before it pins or after it has scrolled away).
   const { scrollYProgress } = useScroll({
     target: stageRef,
+    offset: ["start start", "end end"],
+  });
+  // Whole-section progress drives the dark→light pivot: near-black at the top,
+  // warm parchment by the time the closing statement is read. This section is
+  // the visual hinge from pain → solution.
+  const { scrollYProgress: sectionProgress } = useScroll({
+    target: sectionRef,
     offset: ["start start", "end end"],
   });
 
@@ -3237,14 +3245,34 @@ export function InitiationStudioFlowsRevealSection({ content }) {
   const eyesScale = useTransform(scrollYProgress, [0, 1], [1.18, 1.0]);
   const smokeY = useTransform(scrollYProgress, [0, 1], ["12%", "-14%"]);
 
+  // Pivot transforms — parchment rises, dark scrims recede, and the gaze is
+  // lifted toward luminance so it reads as light (not black smoke) by the bottom.
+  const lightProgress = useTransform(sectionProgress, [0.12, 0.9], [0, 1]);
+  const darkVeil = useTransform(sectionProgress, [0.12, 0.82], [1, 0]);
+  const eyesLight = useTransform(sectionProgress, [0.2, 0.8], [0, 0.72]);
+  const smokeLit = useTransform([smokeOpacity, lightProgress], ([s, l]) => s * (1 - l));
+
+  // Reduced motion: a single static "mid-pivot, fully readable" frame.
+  const parchmentStyle = { opacity: reduce ? 0.85 : lightProgress };
+  const darkVeilStyle = { opacity: reduce ? 0.15 : darkVeil };
+  const eyesLightStyle = { opacity: reduce ? 0.5 : eyesLight };
+  const smokeOpacityResolved = reduce ? 0.25 : smokeLit;
+
   return (
     <section
       id={content.anchor}
+      ref={sectionRef}
       aria-labelledby="initiation-studioflows-reveal-heading"
       className="relative z-10 scroll-mt-24 bg-black"
     >
+      {/* dark→light pivot — warm parchment rises behind everything on scroll */}
+      <motion.div
+        className="pointer-events-none absolute inset-0 z-0 bg-[#F4F1EA]"
+        style={parchmentStyle}
+        aria-hidden="true"
+      />
       {/* THE WATCHER — a scroll-pinned stage so the gaze rises and dissolves */}
-      <div ref={stageRef} className="relative h-[200vh]">
+      <div ref={stageRef} className="relative z-10 h-[200vh]">
         <div className="sticky top-0 h-screen w-full overflow-hidden">
           {/* graded eyes, parallax drift + scroll-driven fade */}
           <motion.div
@@ -3269,6 +3297,12 @@ export function InitiationStudioFlowsRevealSection({ content }) {
               }}
             />
             <div className="absolute inset-0 bg-[#D4A853]/[0.04] mix-blend-overlay" />
+            {/* luminance lift — the gaze brightens toward light as the pivot resolves */}
+            <motion.div
+              className="absolute inset-0 bg-[#F4F1EA] mix-blend-screen"
+              style={eyesLightStyle}
+              aria-hidden="true"
+            />
           </motion.div>
 
           {/* iris glow — the gaze breathing (fades with scroll) */}
@@ -3285,26 +3319,31 @@ export function InitiationStudioFlowsRevealSection({ content }) {
             />
           </motion.div>
 
-          {/* the smoke — drifts opposite the gaze, fades with scroll */}
+          {/* the smoke — drifts opposite the gaze, fades as light rises */}
           <motion.div
             className="pointer-events-none absolute inset-0"
-            style={{ opacity: reduce ? 0.85 : smokeOpacity, y: reduce ? 0 : smokeY }}
+            style={{ opacity: smokeOpacityResolved, y: reduce ? 0 : smokeY }}
             aria-hidden="true"
           >
             <EyesSmoke reduce={reduce} />
           </motion.div>
 
-          {/* hold everything inside black: edges + top/bottom always resolve to #050509 */}
-          <div
+          {/* black scrims — recede as the section pivots to light */}
+          <motion.div
             className="pointer-events-none absolute inset-0"
             style={{
               background:
                 "radial-gradient(62% 58% at 50% 40%, transparent 26%, rgba(0,0,0,0.7) 60%, #000 100%)",
+              ...darkVeilStyle,
             }}
             aria-hidden="true"
           />
           <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black to-transparent" aria-hidden="true" />
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-44 bg-gradient-to-b from-transparent to-black" aria-hidden="true" />
+          <motion.div
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-44 bg-gradient-to-b from-transparent to-black"
+            style={darkVeilStyle}
+            aria-hidden="true"
+          />
 
           <p className="absolute inset-x-0 bottom-[12vh] text-center font-mono text-xs uppercase tracking-[0.3em] text-[#D4A853]/70">
             06 / the system appears
@@ -3320,7 +3359,7 @@ export function InitiationStudioFlowsRevealSection({ content }) {
           index={0}
           reduce={reduce}
           glow
-          className="font-serif text-3xl font-semibold leading-[1.04] tracking-[-0.035em] text-[#F3EFEC] sm:text-4xl lg:text-5xl"
+          className="font-serif text-[1.75rem] font-semibold leading-[1.08] tracking-[-0.035em] text-[#0B0B0C] sm:text-4xl lg:text-5xl"
         >
           {content.headline}
         </DreamLine>
@@ -3330,7 +3369,7 @@ export function InitiationStudioFlowsRevealSection({ content }) {
               key={text}
               index={i + 1}
               reduce={reduce}
-              className="mx-auto max-w-2xl text-base leading-8 text-[#C2BFBA] sm:text-[17px]"
+              className="mx-auto max-w-2xl text-[15px] leading-7 text-[#3F3D39] sm:text-[17px] sm:leading-8"
             >
               {text}
             </DreamLine>
@@ -3597,7 +3636,7 @@ export function InitiationFridayReportSection({ content }) {
                 onPointerMove={onPointerMove}
                 onPointerUp={endDrag}
                 onPointerCancel={endDrag}
-                className="relative h-8 cursor-pointer touch-none select-none focus:outline-none"
+                className="relative h-11 cursor-pointer touch-none select-none focus:outline-none"
               >
                 <div className="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-white/12" />
                 <div
@@ -3657,7 +3696,7 @@ export function InitiationFridayReportSection({ content }) {
                   type="button"
                   onClick={() => setProgress(0)}
                   aria-label="Rewind"
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 text-[#C9C4BE] transition hover:bg-white/[0.06] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/15 text-[#C9C4BE] transition hover:bg-white/[0.06] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
                 >
                   ◀◀
                 </button>
@@ -3666,7 +3705,7 @@ export function InitiationFridayReportSection({ content }) {
                   onClick={() => setPlaying((p) => !p)}
                   aria-label={playing ? "Pause" : "Play"}
                   disabled={reduce}
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 text-[#C9C4BE] transition hover:bg-white/[0.06] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 disabled:opacity-40"
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/15 text-[#C9C4BE] transition hover:bg-white/[0.06] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 disabled:opacity-40"
                 >
                   {playing ? "❚❚" : "▶"}
                 </button>
@@ -3676,7 +3715,7 @@ export function InitiationFridayReportSection({ content }) {
                 <button
                   type="button"
                   onClick={replayUnaided}
-                  className="font-mono text-[11px] uppercase tracking-[0.22em] text-[#9B9894] transition hover:text-[#C9C4BE] focus:outline-none"
+                  className="inline-flex min-h-[44px] items-center px-1 font-mono text-[11px] uppercase tracking-[0.22em] text-[#9B9894] transition hover:text-[#C9C4BE] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
                 >
                   ↺ replay unaided
                 </button>
@@ -3866,9 +3905,9 @@ function FeatureCard({ feature, index, reduce }) {
       viewport={{ once: true, margin: "-12% 0px" }}
       transition={{ duration: reduce ? 0 : 0.5, delay: reduce ? 0 : index * 0.04, ease: [0.16, 1, 0.3, 1] }}
       whileHover={reduce ? undefined : { y: -4 }}
-      className="group flex items-start gap-3.5 rounded-xl border border-white/[0.07] bg-white/[0.02] px-4 py-3.5 transition-colors duration-300 hover:border-[#60A5FA]/30 hover:bg-[#60A5FA]/[0.04]"
+      className="group flex items-start gap-3.5 rounded-xl border border-white/[0.07] bg-white/[0.02] px-4 py-3.5 transition-colors duration-300 hover:border-[#D4A853]/30 hover:bg-[#D4A853]/[0.04]"
     >
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-[#60A5FA] transition-all duration-300 group-hover:scale-[1.07] group-hover:border-[#60A5FA]/45 group-hover:bg-[#60A5FA]/10 group-hover:text-[#9FC3F5] group-hover:shadow-[0_0_22px_rgba(96,165,250,0.3)]">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-[#D4A853] transition-all duration-300 group-hover:scale-[1.07] group-hover:border-[#D4A853]/45 group-hover:bg-[#D4A853]/10 group-hover:text-[#e0b766] group-hover:shadow-[0_0_22px_rgba(212,168,83,0.3)]">
         <FeatureIcon name={feature.icon} active={hovered} reduce={reduce} />
       </span>
       <span>
@@ -3957,7 +3996,7 @@ function ProductLightbox({ state, onClose, onNavigate }) {
             className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6"
             onClick={stop}
           >
-            <span className="font-mono text-[11px] uppercase tracking-[0.22em] text-[#60A5FA]/80">
+            <span className="font-mono text-[11px] uppercase tracking-[0.22em] text-[#D4A853]/80">
               {item?.label}
             </span>
             <button
@@ -4052,7 +4091,7 @@ export function InitiationWhatYouGetSection({ content }) {
   const reduce = useReducedMotion();
   const sectionRef = useRef(null);
   const drift = useParallaxValue(sectionRef, reduce ? 0 : 26, reduce ? 0 : -26);
-  const accent = "#60A5FA";
+  const accent = "#D4A853";
 
   const [lightbox, setLightbox] = useState(null);
   const openLightbox = useCallback((items, index) => setLightbox({ items, index }), []);
@@ -4076,7 +4115,7 @@ export function InitiationWhatYouGetSection({ content }) {
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(60% 50% at 50% 18%, rgba(96,165,250,0.08), transparent 62%)",
+            "radial-gradient(60% 50% at 50% 18%, rgba(212,168,83,0.08), transparent 62%)",
         }}
         aria-hidden="true"
       />
@@ -4084,10 +4123,10 @@ export function InitiationWhatYouGetSection({ content }) {
       <RevealSection>
         <div className="relative mx-auto max-w-6xl px-5 sm:px-8">
           <div className="flex items-center gap-3">
-            <p className="font-mono text-xs uppercase tracking-[0.3em] text-[#60A5FA]/80">
+            <p className="font-mono text-xs uppercase tracking-[0.3em] text-[#D4A853]/80">
               08 / what you get
             </p>
-            <span className="h-px flex-1 bg-gradient-to-r from-[#60A5FA]/30 to-transparent" />
+            <span className="h-px flex-1 bg-gradient-to-r from-[#D4A853]/30 to-transparent" />
           </div>
 
           <h2
@@ -4121,7 +4160,7 @@ export function InitiationWhatYouGetSection({ content }) {
             ))}
           </div>
 
-          <p className="mt-14 font-mono text-[11px] uppercase tracking-[0.24em] text-[#60A5FA]/70">
+          <p className="mt-14 font-mono text-[11px] uppercase tracking-[0.24em] text-[#D4A853]/70">
             {content.proofIntro}
           </p>
           <div className="mt-5 grid gap-5 sm:grid-cols-2">
@@ -4138,7 +4177,7 @@ export function InitiationWhatYouGetSection({ content }) {
                   type="button"
                   onClick={() => openLightbox(content.proof, i)}
                   aria-label={`Enlarge ${shot.label} screenshot`}
-                  className="group/zoom block w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#60A5FA]/70"
+                  className="group/zoom block w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4A853]/70"
                 >
                   <div className="flex items-center gap-2 border-b border-white/[0.06] bg-white/[0.02] px-4 py-2.5">
                     <span className="h-2.5 w-2.5 rounded-full bg-[#FF5F57]/80" />
@@ -4171,7 +4210,7 @@ export function InitiationWhatYouGetSection({ content }) {
 
           {content.experience ? (
             <>
-              <p className="mt-14 font-mono text-[11px] uppercase tracking-[0.24em] text-[#60A5FA]/70">
+              <p className="mt-14 font-mono text-[11px] uppercase tracking-[0.24em] text-[#D4A853]/70">
                 {content.experienceIntro}
               </p>
               <div className="mt-5 grid grid-cols-3 gap-3 sm:gap-6">
@@ -4188,7 +4227,7 @@ export function InitiationWhatYouGetSection({ content }) {
                       type="button"
                       onClick={() => openLightbox(content.experience, i)}
                       aria-label={`Enlarge ${shot.label} screen`}
-                      className="group/zoom relative block w-full overflow-hidden rounded-[1.25rem] border border-white/10 bg-[#06060a] p-1.5 shadow-[0_24px_70px_rgba(0,0,0,0.55)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#60A5FA]/70 sm:rounded-[1.75rem] sm:p-2"
+                      className="group/zoom relative block w-full overflow-hidden rounded-[1.25rem] border border-white/10 bg-[#06060a] p-1.5 shadow-[0_24px_70px_rgba(0,0,0,0.55)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4A853]/70 sm:rounded-[1.75rem] sm:p-2"
                     >
                       <div className="relative aspect-[9/18] w-full cursor-zoom-in overflow-hidden rounded-[0.9rem] bg-[#0b0b12] sm:rounded-[1.25rem]">
                         <Image
@@ -4204,7 +4243,7 @@ export function InitiationWhatYouGetSection({ content }) {
                       </div>
                     </button>
                     <figcaption className="mt-3 px-0.5">
-                      <span className="block font-mono text-[10px] uppercase tracking-[0.22em] text-[#60A5FA]/80">
+                      <span className="block font-mono text-[10px] uppercase tracking-[0.22em] text-[#D4A853]/80">
                         {String(i + 1).padStart(2, "0")} · {shot.label}
                       </span>
                       <span className="mt-1 block text-[12px] leading-5 text-[#8E8B87] sm:text-[13px] sm:leading-6">
@@ -4236,7 +4275,7 @@ export function InitiationFoundingProgramSection({ content }) {
   const reduce = useReducedMotion();
   const sectionRef = useRef(null);
   const drift = useParallaxValue(sectionRef, reduce ? 0 : 22, reduce ? 0 : -22);
-  const accent = "#60A5FA";
+  const accent = "#D4A853";
 
   return (
     <section
@@ -4250,7 +4289,7 @@ export function InitiationFoundingProgramSection({ content }) {
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(58% 48% at 50% 16%, rgba(96,165,250,0.07), transparent 62%)",
+            "radial-gradient(58% 48% at 50% 16%, rgba(212,168,83,0.07), transparent 62%)",
         }}
         aria-hidden="true"
       />
@@ -4258,20 +4297,20 @@ export function InitiationFoundingProgramSection({ content }) {
       <RevealSection>
         <div className="relative mx-auto max-w-5xl px-5 sm:px-8">
           <div className="flex items-center gap-3">
-            <p className="font-mono text-xs uppercase tracking-[0.3em] text-[#60A5FA]/80">
+            <p className="font-mono text-xs uppercase tracking-[0.3em] text-[#D4A853]/80">
               08.5 / founding customer program
             </p>
-            <span className="h-px flex-1 bg-gradient-to-r from-[#60A5FA]/30 to-transparent" />
+            <span className="h-px flex-1 bg-gradient-to-r from-[#D4A853]/30 to-transparent" />
           </div>
 
-          <div className="mt-7 inline-flex items-center gap-2.5 rounded-full border border-[#60A5FA]/25 bg-[#60A5FA]/[0.06] px-4 py-1.5">
+          <div className="mt-7 inline-flex items-center gap-2.5 rounded-full border border-[#D4A853]/25 bg-[#D4A853]/[0.06] px-4 py-1.5">
             <span className="relative flex h-1.5 w-1.5" aria-hidden="true">
               {!reduce ? (
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#60A5FA]/60" />
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#D4A853]/60" />
               ) : null}
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#60A5FA]" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#D4A853]" />
             </span>
-            <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-[#9FC3F5]">
+            <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-[#e0b766]">
               {content.availability}
             </span>
           </div>
@@ -4301,12 +4340,12 @@ export function InitiationFoundingProgramSection({ content }) {
                 className="pointer-events-none absolute inset-0 opacity-60"
                 style={{
                   background:
-                    "radial-gradient(120% 80% at 0% 0%, rgba(96,165,250,0.08), transparent 55%)",
+                    "radial-gradient(120% 80% at 0% 0%, rgba(212,168,83,0.08), transparent 55%)",
                 }}
                 aria-hidden="true"
               />
               <div className="relative">
-                <p className="font-mono text-[11px] uppercase tracking-[0.26em] text-[#60A5FA]/75">
+                <p className="font-mono text-[11px] uppercase tracking-[0.26em] text-[#D4A853]/75">
                   {content.programLabel}
                 </p>
                 <dl className="mt-6 divide-y divide-white/[0.07]">
@@ -4342,18 +4381,18 @@ export function InitiationFoundingProgramSection({ content }) {
                     );
                   })}
                 </dl>
-                <div className="mt-6 flex items-start gap-2.5 rounded-xl border border-[#60A5FA]/15 bg-[#60A5FA]/[0.04] px-4 py-3">
-                  <span className="mt-0.5 font-mono text-[12px] text-[#60A5FA]/80" aria-hidden="true">
+                <div className="mt-6 flex items-start gap-2.5 rounded-xl border border-[#D4A853]/15 bg-[#D4A853]/[0.04] px-4 py-3">
+                  <span className="mt-0.5 font-mono text-[12px] text-[#D4A853]/80" aria-hidden="true">
                     ✶
                   </span>
-                  <p className="text-[13px] leading-6 text-[#9FC3F5]">{content.lockNote}</p>
+                  <p className="text-[13px] leading-6 text-[#e0b766]">{content.lockNote}</p>
                 </div>
               </div>
             </div>
 
             {/* what's included + partnership framing */}
             <div className="bg-[#0b0b12] p-7 sm:p-9">
-              <p className="font-mono text-[11px] uppercase tracking-[0.26em] text-[#60A5FA]/75">
+              <p className="font-mono text-[11px] uppercase tracking-[0.26em] text-[#D4A853]/75">
                 What it includes
               </p>
               <ul className="mt-6 space-y-3">
@@ -4367,8 +4406,8 @@ export function InitiationFoundingProgramSection({ content }) {
                     className="flex items-start gap-3"
                   >
                     <span
-                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#60A5FA]"
-                      style={{ boxShadow: "0 0 8px rgba(96,165,250,0.7)" }}
+                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#D4A853]"
+                      style={{ boxShadow: "0 0 8px rgba(212,168,83,0.7)" }}
                       aria-hidden="true"
                     />
                     <span className="text-[15px] leading-7 text-[#D8D5D0]">{item}</span>
@@ -4420,7 +4459,7 @@ export function InitiationFoundingProgramSection({ content }) {
 // fast, whether the product is for them — the qualifier before the diagnostic.
 export function InitiationServiceLoopsSection({ content }) {
   const reduce = useReducedMotion();
-  const accent = "#60A5FA";
+  const accent = "#D4A853";
 
   return (
     <section
@@ -4433,7 +4472,7 @@ export function InitiationServiceLoopsSection({ content }) {
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(55% 45% at 50% 24%, rgba(96,165,250,0.07), transparent 60%)",
+            "radial-gradient(55% 45% at 50% 24%, rgba(212,168,83,0.07), transparent 60%)",
         }}
         aria-hidden="true"
       />
@@ -4441,10 +4480,10 @@ export function InitiationServiceLoopsSection({ content }) {
       <RevealSection>
         <div className="relative mx-auto max-w-5xl px-5 sm:px-8">
           <div className="flex items-center gap-3">
-            <p className="font-mono text-xs uppercase tracking-[0.3em] text-[#60A5FA]/80">
+            <p className="font-mono text-xs uppercase tracking-[0.3em] text-[#D4A853]/80">
               09 / built for service loops
             </p>
-            <span className="h-px flex-1 bg-gradient-to-r from-[#60A5FA]/30 to-transparent" />
+            <span className="h-px flex-1 bg-gradient-to-r from-[#D4A853]/30 to-transparent" />
           </div>
 
           <h2
@@ -4461,7 +4500,7 @@ export function InitiationServiceLoopsSection({ content }) {
             ))}
           </div>
 
-          <p className="mt-14 font-mono text-[11px] uppercase tracking-[0.24em] text-[#60A5FA]/70">
+          <p className="mt-14 font-mono text-[11px] uppercase tracking-[0.24em] text-[#D4A853]/70">
             {content.lifecycleIntro}
           </p>
           <ol className="mt-5 flex flex-wrap items-center gap-x-2 gap-y-3">
@@ -4472,7 +4511,7 @@ export function InitiationServiceLoopsSection({ content }) {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: "-10% 0px" }}
                   transition={{ duration: reduce ? 0 : 0.45, delay: reduce ? 0 : i * 0.12, ease: [0.16, 1, 0.3, 1] }}
-                  className="inline-flex items-center rounded-full border border-[#60A5FA]/25 bg-[#60A5FA]/[0.06] px-4 py-2 text-sm font-semibold tracking-[-0.01em] text-[#EDEBE8]"
+                  className="inline-flex items-center rounded-full border border-[#D4A853]/25 bg-[#D4A853]/[0.06] px-4 py-2 text-sm font-semibold tracking-[-0.01em] text-[#EDEBE8]"
                 >
                   {step}
                 </motion.span>
@@ -4483,7 +4522,7 @@ export function InitiationServiceLoopsSection({ content }) {
                     whileInView={{ opacity: 1 }}
                     viewport={{ once: true }}
                     transition={{ duration: reduce ? 0 : 0.4, delay: reduce ? 0 : i * 0.12 + 0.1 }}
-                    className="font-mono text-[#60A5FA]/60"
+                    className="font-mono text-[#D4A853]/60"
                   >
                     →
                   </motion.span>
@@ -4492,7 +4531,7 @@ export function InitiationServiceLoopsSection({ content }) {
             ))}
           </ol>
 
-          <p className="mt-14 font-mono text-[11px] uppercase tracking-[0.24em] text-[#60A5FA]/70">
+          <p className="mt-14 font-mono text-[11px] uppercase tracking-[0.24em] text-[#D4A853]/70">
             {content.fitIntro}
           </p>
           <ul className="mt-5 flex flex-wrap gap-2.5">
@@ -4510,7 +4549,7 @@ export function InitiationServiceLoopsSection({ content }) {
             ))}
           </ul>
 
-          <div className="mt-12 border-l-2 border-[#60A5FA]/50 pl-6">
+          <div className="mt-12 border-l-2 border-[#D4A853]/50 pl-6">
             <RevealLine
               as="p"
               className="max-w-2xl font-serif text-2xl font-semibold leading-snug tracking-[-0.025em] text-[#F3EFEC] sm:text-3xl"
@@ -4521,6 +4560,41 @@ export function InitiationServiceLoopsSection({ content }) {
         </div>
       </RevealSection>
     </section>
+  );
+}
+
+// Understated inline CTA — a "lightly sprinkled" anchor along the scroll journey
+// that reuses the primary diagnostic href without competing with the main CTAs.
+// tone="dark" → amber-on-dark ghost pill · tone="light" → ink pill on parchment.
+export function InlineCtaAnchor({
+  href,
+  label = "See if StudioFlows is a fit",
+  tone = "dark",
+  bg = "#030304",
+}) {
+  const dark = tone !== "light";
+  return (
+    <div
+      className="relative z-10 flex justify-center px-5 pb-12 sm:pb-16"
+      style={{ backgroundColor: bg }}
+    >
+      <Link
+        href={href}
+        className={
+          dark
+            ? "group inline-flex min-h-[44px] items-center gap-2 rounded-full border border-[#D4A853]/30 bg-[#D4A853]/[0.06] px-5 py-2.5 text-sm font-medium tracking-[-0.01em] text-[#D4A853] transition hover:border-[#D4A853]/60 hover:bg-[#D4A853]/[0.12] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4A853]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+            : "group inline-flex min-h-[44px] items-center gap-2 rounded-full border border-[#0B0B0C]/25 bg-[#0B0B0C]/[0.05] px-5 py-2.5 text-sm font-medium tracking-[-0.01em] text-[#0B0B0C] transition hover:bg-[#0B0B0C]/[0.1] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0B0B0C]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F4F1EA]"
+        }
+      >
+        {label}
+        <span
+          aria-hidden="true"
+          className="transition-transform duration-300 group-hover:translate-x-0.5"
+        >
+          →
+        </span>
+      </Link>
+    </div>
   );
 }
 
@@ -4912,7 +4986,7 @@ export function InitiationConfidenceModelSection({ content }) {
                   onPointerUp={endDrag}
                   onPointerCancel={endDrag}
                   onKeyDown={onKeyDown}
-                  className="relative mt-2 h-9 cursor-pointer touch-none select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4A853] focus-visible:ring-offset-2 focus-visible:ring-offset-[#08090f]"
+                  className="relative mt-2 h-11 cursor-pointer touch-none select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4A853] focus-visible:ring-offset-2 focus-visible:ring-offset-[#08090f]"
                 >
                   <div className="absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-white/12" />
                   <div

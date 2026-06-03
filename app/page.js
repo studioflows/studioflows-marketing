@@ -14,6 +14,7 @@ import {
   InitiationServiceLoopsSection,
   InitiationStudioFlowsRevealSection,
   InitiationWhatYouGetSection,
+  InlineCtaAnchor,
   ProgressionProvider,
   SystemResetTransition,
 } from "@/components/home/InitiationHomeSections";
@@ -29,6 +30,13 @@ export default function HomePage() {
         <InitiationDependencySelectorSection content={C.dependencySelector} />
         <InitiationFounderStorySection content={C.founderStory} />
         <InitiationContinuityReframeSection content={C.continuityReframe} />
+        {/* lightly-sprinkled anchor after the pain climax (dark) */}
+        <InlineCtaAnchor
+          href={C.hero.primaryCtaTarget}
+          label={C.hero.primaryCta}
+          tone="dark"
+          bg="#09090F"
+        />
         <InitiationAICategorySection content={C.aiCategorySeparation} />
 
         <InitiationStudioFlowsRevealSection content={C.studioFlowsReveal} />
@@ -37,6 +45,13 @@ export default function HomePage() {
         <InitiationWhatYouGetSection content={C.whatYouGet} />
         <InitiationFoundingProgramSection content={C.foundingProgram} />
         <InitiationServiceLoopsSection content={C.serviceLoops} />
+        {/* lightly-sprinkled anchor after the service-loops fit check (dark) */}
+        <InlineCtaAnchor
+          href={C.hero.primaryCtaTarget}
+          label={C.hero.primaryCta}
+          tone="dark"
+          bg="#08080d"
+        />
 
         {/* THE TURN — the noir is killed and the page is reborn in light. */}
         <SystemResetTransition />

@@ -9,6 +9,18 @@ import {
   toIngestAttribution,
 } from "../../../lib/lead-attribution";
 import { evaluateQualification } from "../../../lib/qualify-custom-ops-hub";
+import {
+  QualifierAtmosphere,
+  QUALIFIER_PAGE,
+  Q_BODY,
+  Q_CARD,
+  Q_CTA_PRIMARY,
+  Q_EYEBROW,
+  Q_HEADLINE,
+  Q_INPUT,
+  Q_OPTION_ACTIVE,
+  Q_OPTION_IDLE,
+} from "../../../components/qualifier/qualifier-theme";
 
 const QUIZ_SECTIONS = [
   {
@@ -597,9 +609,7 @@ export default function CustomOpsHubClient() {
                 type="button"
                 onClick={() => updateSingleValue(field.name, option)}
                 className={`rounded-xl border px-4 py-3 text-left text-sm transition ${
-                  isActive
-                    ? "border-[#FACC15]/60 bg-[#FACC15]/15 text-[#FDE68A]"
-                    : "border-white/10 bg-black/25 text-white/80 hover:border-white/30 hover:bg-white/[0.04]"
+                  isActive ? Q_OPTION_ACTIVE : Q_OPTION_IDLE
                 }`}
               >
                 {option}
@@ -621,9 +631,7 @@ export default function CustomOpsHubClient() {
                 type="button"
                 onClick={() => toggleMultiValue(field.name, option)}
                 className={`rounded-xl border px-4 py-3 text-left text-sm transition ${
-                  selected
-                    ? "border-[#FACC15]/60 bg-[#FACC15]/15 text-[#FDE68A]"
-                    : "border-white/10 bg-black/25 text-white/80 hover:border-white/30 hover:bg-white/[0.04]"
+                  selected ? Q_OPTION_ACTIVE : Q_OPTION_IDLE
                 }`}
               >
                 {option}
@@ -642,7 +650,7 @@ export default function CustomOpsHubClient() {
           onChange={(event) => updateInputValue(field.name, event.target.value)}
           rows={3}
           placeholder={field.placeholder}
-          className="mt-3 w-full rounded-xl border border-white/12 bg-black/25 px-4 py-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-[#FACC15]/55"
+          className={`mt-3 ${Q_INPUT}`}
         />
       );
     }
@@ -665,61 +673,60 @@ export default function CustomOpsHubClient() {
         value={value}
         onChange={(event) => updateInputValue(field.name, event.target.value)}
         placeholder={field.placeholder}
-        className="mt-3 w-full rounded-xl border border-white/12 bg-black/25 px-4 py-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-[#FACC15]/55"
+        className={`mt-3 ${Q_INPUT}`}
       />
     );
   };
 
   if (showDisqualifiedStep) {
     return (
-      <main className="relative min-h-screen overflow-hidden bg-[#0A0A0A] text-[#F7F7F7]">
-        <div className="pointer-events-none absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,0.08)_0.5px,transparent_0.5px),linear-gradient(90deg,rgba(255,255,255,0.08)_0.5px,transparent_0.5px)] [background-size:64px_64px]" />
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_0%,rgba(99,102,241,0.2),transparent_28%),radial-gradient(circle_at_82%_0%,rgba(168,85,247,0.14),transparent_34%)]" />
+      <main className={QUALIFIER_PAGE}>
+        <QualifierAtmosphere />
         <div className="relative z-10 mx-auto w-full max-w-[1100px] px-6 py-8 sm:px-8 lg:px-10">
         <nav className="flex items-center justify-center py-4 sm:py-5">
           <img
-            src="/StudioFlows logo white (1200 x 675 px).png"
+            src="/StudioFlows logo (1200 x 675 px) (1).png"
             alt="StudioFlows"
-            className="h-12 w-auto object-contain opacity-90 sm:h-14"
+            className="h-12 w-auto object-contain sm:h-14"
           />
         </nav>
 
         {preQualBanner && (
-          <p className="mt-4 rounded-xl border border-[#FACC15]/30 bg-[#FACC15]/10 px-4 py-3 text-center text-sm text-[#FDE68A]">
+          <p className="mt-4 rounded-xl border border-[#8A6A1F]/45 bg-[#D4A853]/20 px-4 py-3 text-center text-sm font-medium text-[#4A3608]">
             {preQualBanner}
           </p>
         )}
 
-        <section className="mt-8 rounded-[28px] border border-white/12 bg-black/25 p-7 sm:p-10">
-            <p className="text-[11px] uppercase tracking-[0.24em] text-[#FACC15]">Thank You</p>
-            <h1 className="mt-4 text-3xl font-semibold leading-tight tracking-tight text-white sm:text-5xl">
+        <section className={`mt-8 p-7 sm:p-10 ${Q_CARD}`}>
+            <p className={Q_EYEBROW}>Thank You</p>
+            <h1 className={`mt-4 text-3xl sm:text-5xl ${Q_HEADLINE}`}>
               We received your request.
               <br />
-              <span className="text-white/65">At this stage, it may not be the ideal fit for an immediate build.</span>
+              <span className="text-[#4E483D]">At this stage, it may not be the ideal fit for an immediate build.</span>
             </h1>
-            <p className="mt-5 max-w-[760px] text-sm leading-7 text-white/75">
+            <p className={`mt-5 max-w-[760px] text-sm leading-7 ${Q_BODY}`}>
               We saved your details and will keep you in our priority update circuit as we open additional implementation
               windows.
             </p>
             <div className="mt-8 grid gap-2 sm:grid-cols-3">
               {disqualificationSummary.map((item) => (
-                <div key={item} className="rounded-xl border border-white/12 bg-black/30 px-4 py-3 text-sm text-white/80">
+                <div key={item} className="rounded-xl border border-black/10 bg-white/85 px-4 py-3 text-sm text-[#2A2722]">
                   {item}
                 </div>
               ))}
             </div>
             {outreachNextSteps.length > 0 && (
-              <ul className="mt-8 space-y-3 rounded-2xl border border-white/12 bg-black/30 p-5 text-sm leading-7 text-white/80">
+              <ul className="mt-8 space-y-3 rounded-2xl border border-black/10 bg-white/85 p-5 text-sm leading-7 text-[#2A2722]">
                 {outreachNextSteps.map((step) => (
                   <li key={step} className="flex gap-2">
-                    <span className="text-[#FACC15]">•</span>
+                    <span className="text-[#8A6A1F]">•</span>
                     <span>{step}</span>
                   </li>
                 ))}
               </ul>
             )}
             {marketingBucket && (
-              <p className="mt-4 text-xs uppercase tracking-[0.18em] text-white/45">Outreach track: {marketingBucket}</p>
+              <p className="mt-4 text-xs uppercase tracking-[0.18em] text-[#4E483D]/80">Outreach track: {marketingBucket}</p>
             )}
           </section>
         </div>
@@ -728,50 +735,49 @@ export default function CustomOpsHubClient() {
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#0A0A0A] text-[#F7F7F7]">
-      <div className="pointer-events-none absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,0.08)_0.5px,transparent_0.5px),linear-gradient(90deg,rgba(255,255,255,0.08)_0.5px,transparent_0.5px)] [background-size:64px_64px]" />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_0%,rgba(99,102,241,0.2),transparent_28%),radial-gradient(circle_at_82%_0%,rgba(168,85,247,0.14),transparent_34%)]" />
+    <main className={QUALIFIER_PAGE}>
+      <QualifierAtmosphere />
 
       <div className="relative z-10 mx-auto w-full max-w-[1100px] px-6 py-8 sm:px-8 lg:px-10">
         <nav className="flex items-center justify-center py-4 sm:py-5">
           <img
-            src="/StudioFlows logo white (1200 x 675 px).png"
+            src="/StudioFlows logo (1200 x 675 px) (1).png"
             alt="StudioFlows"
-            className="h-12 w-auto object-contain opacity-90 sm:h-14"
+            className="h-12 w-auto object-contain sm:h-14"
           />
         </nav>
 
         {preQualBanner && (
-          <p className="mt-4 rounded-xl border border-[#FACC15]/30 bg-[#FACC15]/10 px-4 py-3 text-center text-sm text-[#FDE68A]">
+          <p className="mt-4 rounded-xl border border-[#8A6A1F]/45 bg-[#D4A853]/20 px-4 py-3 text-center text-sm font-medium text-[#4A3608]">
             {preQualBanner}
           </p>
         )}
 
         <section className="py-10 text-center sm:py-14">
-          <p className="text-[11px] uppercase tracking-[0.28em] text-[#FACC15]">StudioFlows</p>
-          <h1 className="mx-auto mt-6 max-w-[900px] text-balance text-[2.2rem] font-semibold leading-[0.96] tracking-[-0.03em] sm:text-[3rem] lg:text-[4.8rem]">
+          <p className={Q_EYEBROW}>the path opens</p>
+          <h1 className={`mx-auto mt-6 max-w-[900px] text-balance text-[2.2rem] sm:text-[3rem] lg:text-[4.4rem] ${Q_HEADLINE}`}>
             OPS Drag Audit Qualifier
             <br />
-            <span className="text-white/58">for teams ready to stop execution drag</span>
+            <span className="text-[#5A5346]">for teams ready to stop execution drag</span>
           </h1>
-          <p className="mx-auto mt-6 max-w-[780px] text-balance text-[1rem] leading-7 text-white/74 sm:text-[1.1rem]">
+          <p className={`mx-auto mt-6 max-w-[780px] text-balance sm:text-[17px] ${Q_BODY}`}>
             Answer a few focused questions in about 90 seconds so we can understand your priorities, urgency, and fit
             for a custom StudioFlows build.
           </p>
         </section>
 
-        <section className="rounded-[28px] border border-white/12 bg-white/[0.02] p-6 sm:p-8">
-          <div className="sticky top-2 z-20 -mx-2 rounded-xl border border-white/10 bg-[#1F1F1F]/95 px-2 py-2 backdrop-blur">
+        <section className={`p-6 sm:p-8 ${Q_CARD}`}>
+          <div className="sticky top-2 z-20 -mx-2 rounded-xl border border-black/12 bg-[#FBF9F4]/96 px-3 py-2.5 backdrop-blur">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-[11px] uppercase tracking-[0.24em] text-[#FACC15]">
+              <p className={Q_EYEBROW}>
                 Question {questionIndex + 1} of {totalQuestions}
               </p>
-              <p className="text-xs text-white/55">{progressMilestone}</p>
+              <p className="text-xs font-medium text-[#4E483D]">{progressMilestone}</p>
             </div>
-            <div className="mt-3 h-2 w-full rounded-full bg-white/10">
-              <div className="h-2 rounded-full bg-[#FACC15] transition-all duration-300" style={{ width: `${progressPercent}%` }} />
+            <div className="mt-3 h-2 w-full rounded-full bg-black/15">
+              <div className="h-2 rounded-full bg-[#8A6A1F] transition-all duration-300" style={{ width: `${progressPercent}%` }} />
             </div>
-            <p className="mt-2 text-xs text-white/45">{progressPercent}% complete</p>
+            <p className="mt-2 text-xs text-[#4E483D]">{progressPercent}% complete</p>
           </div>
 
           <AnimatePresence mode="wait" initial={false}>
@@ -782,14 +788,14 @@ export default function CustomOpsHubClient() {
               exit={{ opacity: 0, x: -34 }}
               transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
             >
-              <div className="mt-4 rounded-xl border border-white/10 bg-black/20 px-3 py-2.5">
-                <p className="text-[11px] uppercase tracking-[0.2em] text-[#FACC15]/90">{currentQuestion.sectionTitle}</p>
-                <p className="mt-1 text-xs leading-5 text-white/65">{currentQuestion.sectionChallenger}</p>
+              <div className="mt-4 rounded-xl border border-[#8A6A1F]/35 bg-[#D4A853]/[0.18] px-3.5 py-3">
+                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.2em] text-[#6B5212]">{currentQuestion.sectionTitle}</p>
+                <p className="mt-1 text-xs leading-5 text-[#3A352C]">{currentQuestion.sectionChallenger}</p>
               </div>
 
               <div className="mt-5 space-y-6">
                 <div key={currentQuestion.name} onKeyDown={handleQuestionKeyDown}>
-                  <p className="text-sm font-medium text-white">
+                  <p className="text-sm font-medium text-[#0B0B0C]">
                     {currentQuestion.label}
                     {currentQuestion.required ? " *" : ""}
                   </p>
@@ -798,7 +804,7 @@ export default function CustomOpsHubClient() {
               </div>
 
               {stepError && (
-                <div className="mt-5 rounded-lg border border-red-300/35 bg-red-300/10 px-3 py-2 text-sm text-red-200">
+                <div className="mt-5 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-700">
                   {stepError}
                 </div>
               )}
@@ -807,8 +813,8 @@ export default function CustomOpsHubClient() {
                 <div
                   className={`mt-5 rounded-lg border px-3 py-2 text-sm ${
                     submitState === "success"
-                      ? "border-emerald-300/35 bg-emerald-300/10 text-emerald-200"
-                      : "border-red-300/35 bg-red-300/10 text-red-200"
+                      ? "border-emerald-600/30 bg-emerald-500/10 text-emerald-800"
+                      : "border-red-500/30 bg-red-500/10 text-red-700"
                   }`}
                 >
                   {submitMessage}
@@ -816,13 +822,13 @@ export default function CustomOpsHubClient() {
               )}
 
               {currentQuestionHasInvalidBusinessEmail && (
-                <div className="mt-5 rounded-lg border border-red-300/35 bg-red-300/10 px-3 py-2 text-sm text-red-200">
+                <div className="mt-5 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-700">
                   Please use your company email (personal domains like Gmail/Yahoo are not accepted).
                 </div>
               )}
 
               {questionIndex === totalQuestions - 1 && (
-                <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-xl border border-white/12 bg-black/25 px-4 py-3 text-sm leading-6 text-white/75">
+                <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-xl border border-black/12 bg-white/85 px-4 py-3 text-sm leading-6 text-[#3A352C]">
                   <input
                     type="checkbox"
                     checked={consentAccepted}
@@ -830,15 +836,15 @@ export default function CustomOpsHubClient() {
                       setConsentAccepted(event.target.checked);
                       setStepError("");
                     }}
-                    className="mt-1 h-4 w-4 shrink-0 rounded border-white/20 bg-black/40 accent-[#FACC15]"
+                    className="mt-1 h-4 w-4 shrink-0 rounded border-black/25 bg-white accent-[#8A6A1F]"
                   />
                   <span>
                     I agree to be contacted about my request and accept the{" "}
-                    <a href="/privacy-policy" className="text-[#FACC15] underline underline-offset-2">
+                    <a href="/privacy-policy" className="font-medium text-[#8A6A1F] underline underline-offset-2">
                       Privacy Policy
                     </a>{" "}
                     and{" "}
-                    <a href="/terms-of-service" className="text-[#FACC15] underline underline-offset-2">
+                    <a href="/terms-of-service" className="font-medium text-[#8A6A1F] underline underline-offset-2">
                       Terms of Service
                     </a>
                     .
@@ -848,12 +854,12 @@ export default function CustomOpsHubClient() {
             </motion.div>
           </AnimatePresence>
 
-          <div className="mt-8 flex items-center justify-between gap-3 border-t border-white/10 pt-5">
+          <div className="mt-8 flex items-center justify-between gap-3 border-t border-black/10 pt-5">
             <button
               type="button"
               onClick={handleBack}
               disabled={questionIndex === 0 || isSubmitting}
-              className="rounded-xl border border-white/15 px-4 py-2 text-[11px] uppercase tracking-[0.18em] text-white/72 transition hover:bg-white/[0.04] disabled:cursor-not-allowed disabled:opacity-45"
+              className="rounded-full border border-black/20 px-5 py-2.5 text-[11px] uppercase tracking-[0.18em] text-[#3A352C] transition hover:bg-black/[0.05] disabled:cursor-not-allowed disabled:opacity-45"
             >
               Back
             </button>
@@ -867,7 +873,7 @@ export default function CustomOpsHubClient() {
                   currentQuestionHasInvalidBusinessEmail ||
                   (questionIndex === totalQuestions - 1 && !consentAccepted)
                 }
-                className="rounded-xl bg-[#FACC15] px-6 py-3 text-[11px] font-medium uppercase tracking-[0.2em] text-black transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
+                className={Q_CTA_PRIMARY}
               >
                 {questionIndex === totalQuestions - 1 ? (isSubmitting ? "Submitting..." : "Qualify and Continue") : "Continue"}
               </button>
@@ -875,22 +881,22 @@ export default function CustomOpsHubClient() {
           </div>
         </section>
 
-        <section className="mt-6 rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:p-4">
-          <p className="px-1 text-[10px] uppercase tracking-[0.22em] text-[#FACC15]">FAQ</p>
+        <section className="mt-6 rounded-2xl border border-black/10 bg-white/70 p-3 sm:p-4">
+          <p className={`px-1 ${Q_EYEBROW}`}>FAQ</p>
           <div className="mt-2 space-y-2">
             {FAQ_ITEMS.map((item, index) => {
               const isOpen = openFaqIndex === index;
               return (
-                <div key={item.question} className="rounded-lg border border-white/10 bg-black/25 px-3 py-2">
+                <div key={item.question} className="rounded-lg border border-black/10 bg-white/85 px-3 py-2">
                   <button
                     type="button"
                     onClick={() => setOpenFaqIndex(isOpen ? null : index)}
                     className="flex w-full items-center justify-between gap-3 py-1 text-left"
                   >
-                    <p className="text-sm font-medium leading-6 text-white">{item.question}</p>
-                    <span className="text-[11px] text-white/60">{isOpen ? "−" : "+"}</span>
+                    <p className="text-sm font-medium leading-6 text-[#0B0B0C]">{item.question}</p>
+                    <span className="text-[13px] text-[#8A6A1F]">{isOpen ? "−" : "+"}</span>
                   </button>
-                  {isOpen && <p className="pb-1 text-xs leading-6 text-white/72">{item.answer}</p>}
+                  {isOpen && <p className="pb-1 text-xs leading-6 text-[#3A352C]">{item.answer}</p>}
                 </div>
               );
             })}
