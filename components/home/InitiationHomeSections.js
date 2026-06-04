@@ -16,6 +16,7 @@ import {
   AnimatePresence,
   motion,
   useInView,
+  useMotionTemplate,
   useMotionValue,
   useMotionValueEvent,
   useReducedMotion,
@@ -227,7 +228,7 @@ function StudioFlowsLogoMark({ className = "" }) {
         alt="StudioFlows"
         width={1200}
         height={675}
-        className="h-7 w-auto sm:h-8"
+        className="h-10 w-auto sm:h-12 lg:h-14"
         priority
       />
     </div>
@@ -359,6 +360,260 @@ function HeroForceField({ progress }) {
         }
       />
     </motion.div>
+  );
+}
+
+// Reactive "operational energy" field. A living background current: soft
+// metaballs drift autonomously like a slow current, then locally bulge and lerp
+// toward the pointer like an amoeba. Brand-abstract "operational pressure ->
+// clarity" — organic flow, NO falling code / glyphs (that aesthetic is reserved
+// for Vessa). Canvas + cached sprite blobs for mobile-grade perf. Reduced-motion
+// renders a static gradient with no rAF loop.
+const REACTIVE_FIELD_PALETTES = {
+  // Graphite/near-black base, magenta pressure + faint amber energy. Additive
+  // blending reads as chaotic operational pressure glowing out of the dark.
+  dark: {
+    base: "#0B0B0D",
+    composite: "lighter",
+    staticBg:
+      "radial-gradient(58% 50% at 62% 34%, rgba(219,39,119,0.18), transparent 70%), radial-gradient(46% 44% at 34% 72%, rgba(212,168,83,0.09), transparent 72%), #0B0B0D",
+    blobs: [
+      // Large slow current — barely there, sets the drift of the whole field.
+      { hx: 0.36, hy: 0.42, r: 0.92, driftR: 0.07, sp: 0.05, phase: 0.0, alpha: 0.14, follow: 0.12, color: [219, 39, 119] },
+      // Primary magenta bloom — the dominant pointer-reactive signal.
+      { hx: 0.62, hy: 0.3, r: 0.52, driftR: 0.12, sp: 0.09, phase: 1.7, alpha: 0.22, follow: 0.42, color: [219, 39, 119] },
+      // Warm amber ember — emphasis, follows quickest, small bulge.
+      { hx: 0.54, hy: 0.64, r: 0.32, driftR: 0.13, sp: 0.12, phase: 3.1, alpha: 0.12, follow: 0.5, color: [212, 168, 83] },
+    ],
+  },
+  // Warm parchment base, soft amber/warm energy. Source-over with low alpha
+  // tints the parchment gently — feels calm/resolved rather than pressured.
+  light: {
+    base: "#F4F1EA",
+    composite: "source-over",
+    staticBg:
+      "radial-gradient(60% 52% at 50% 40%, rgba(212,168,83,0.16), transparent 72%), radial-gradient(44% 40% at 70% 70%, rgba(219,39,119,0.05), transparent 72%), #F4F1EA",
+    blobs: [
+      { hx: 0.42, hy: 0.4, r: 0.9, driftR: 0.06, sp: 0.045, phase: 0.5, alpha: 0.1, follow: 0.12, color: [212, 168, 83] },
+      { hx: 0.6, hy: 0.34, r: 0.5, driftR: 0.1, sp: 0.08, phase: 2.2, alpha: 0.12, follow: 0.36, color: [224, 178, 110] },
+      { hx: 0.5, hy: 0.66, r: 0.3, driftR: 0.11, sp: 0.11, phase: 3.6, alpha: 0.08, follow: 0.46, color: [212, 168, 83] },
+    ],
+  },
+};
+
+export function ReactiveField({ tone = "dark", className = "" }) {
+  const reduce = useReducedMotion();
+  const containerRef = useRef(null);
+  const canvasRef = useRef(null);
+  const stateRef = useRef({
+    raf: 0,
+    running: false,
+    dpr: 1,
+    w: 0,
+    h: 0,
+    t: 0,
+    last: 0,
+    px: 0,
+    py: 0,
+    active: false,
+    blobs: null,
+    sprites: null,
+  });
+
+  useEffect(() => {
+    if (reduce) return undefined;
+    const container = containerRef.current;
+    const canvas = canvasRef.current;
+    if (!container || !canvas) return undefined;
+    const ctx = canvas.getContext("2d", { alpha: true });
+    if (!ctx) return undefined;
+
+    const palette = REACTIVE_FIELD_PALETTES[tone] || REACTIVE_FIELD_PALETTES.dark;
+    const s = stateRef.current;
+    const finePointer =
+      typeof window !== "undefined" &&
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(pointer: fine)").matches;
+
+    // Cache one soft radial sprite per blob color so the loop never allocates a
+    // gradient per frame — just drawImage of a pre-rendered disc.
+    const spriteCache = new Map();
+    function spriteFor(color) {
+      const key = color.join(",");
+      let sprite = spriteCache.get(key);
+      if (sprite) return sprite;
+      const size = 256;
+      sprite = document.createElement("canvas");
+      sprite.width = size;
+      sprite.height = size;
+      const sctx = sprite.getContext("2d");
+      const grad = sctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+      const [r, g, b] = color;
+      grad.addColorStop(0, `rgba(${r},${g},${b},1)`);
+      grad.addColorStop(0.45, `rgba(${r},${g},${b},0.45)`);
+      grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
+      sctx.fillStyle = grad;
+      sctx.fillRect(0, 0, size, size);
+      spriteCache.set(key, sprite);
+      return sprite;
+    }
+
+    s.blobs = palette.blobs.map((b) => ({
+      ...b,
+      x: 0,
+      y: 0,
+      cr: 0,
+      sprite: spriteFor(b.color),
+    }));
+
+    function resize() {
+      const rect = container.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      s.dpr = dpr;
+      s.w = Math.max(1, Math.round(rect.width));
+      s.h = Math.max(1, Math.round(rect.height));
+      canvas.width = Math.round(s.w * dpr);
+      canvas.height = Math.round(s.h * dpr);
+      canvas.style.width = `${s.w}px`;
+      canvas.style.height = `${s.h}px`;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const minDim = Math.min(s.w, s.h);
+      for (const blob of s.blobs) {
+        blob.x = blob.hx * s.w;
+        blob.y = blob.hy * s.h;
+        blob.cr = blob.r * minDim;
+      }
+    }
+    resize();
+
+    function onMove(e) {
+      const rect = canvas.getBoundingClientRect();
+      s.px = e.clientX - rect.left;
+      s.py = e.clientY - rect.top;
+      s.active = true;
+    }
+    function onLeave() {
+      s.active = false;
+    }
+
+    function draw(dt) {
+      const { w, h, t } = s;
+      const minDim = Math.min(w, h);
+      const ease = 1 - Math.pow(0.0006, dt);
+
+      ctx.globalCompositeOperation = "source-over";
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = palette.base;
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.globalCompositeOperation = palette.composite;
+      for (const blob of s.blobs) {
+        const driftX = Math.cos(t * blob.sp + blob.phase) * blob.driftR * w;
+        const driftY = Math.sin(t * blob.sp * 0.82 + blob.phase * 1.3) * blob.driftR * h;
+        let tx = blob.hx * w + driftX;
+        let ty = blob.hy * h + driftY;
+        let targetR = blob.r * minDim;
+
+        if (s.active && finePointer) {
+          const dx = s.px - blob.x;
+          const dy = s.py - blob.y;
+          const dist = Math.hypot(dx, dy) || 1;
+          const reach = minDim * 0.95;
+          const pull = Math.max(0, 1 - dist / reach);
+          tx += (s.px - tx) * blob.follow * pull;
+          ty += (s.py - ty) * blob.follow * pull;
+          targetR *= 1 + pull * 0.6;
+        }
+
+        blob.x += (tx - blob.x) * ease;
+        blob.y += (ty - blob.y) * ease;
+        blob.cr += (targetR - blob.cr) * ease;
+
+        const d = blob.cr * 2;
+        ctx.globalAlpha = blob.alpha;
+        ctx.drawImage(blob.sprite, blob.x - blob.cr, blob.y - blob.cr, d, d);
+      }
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "source-over";
+    }
+
+    function frame(now) {
+      if (!s.running) return;
+      const dt = s.last ? Math.min((now - s.last) / 1000, 0.05) : 0.016;
+      s.last = now;
+      s.t += dt;
+      draw(dt);
+      s.raf = requestAnimationFrame(frame);
+    }
+
+    function start() {
+      if (s.running) return;
+      s.running = true;
+      s.last = 0;
+      s.raf = requestAnimationFrame(frame);
+    }
+    function stop() {
+      if (!s.running) return;
+      s.running = false;
+      cancelAnimationFrame(s.raf);
+    }
+
+    // Only run the loop while on-screen and the tab is visible.
+    const io = new IntersectionObserver(
+      (entries) => {
+        const onScreen = entries.some((entry) => entry.isIntersecting);
+        if (onScreen && document.visibilityState !== "hidden") start();
+        else stop();
+      },
+      { threshold: 0 }
+    );
+    io.observe(container);
+
+    function onVisibility() {
+      if (document.visibilityState === "hidden") stop();
+    }
+
+    window.addEventListener("resize", resize, { passive: true });
+    document.addEventListener("visibilitychange", onVisibility);
+    if (finePointer) {
+      window.addEventListener("pointermove", onMove, { passive: true });
+      document.addEventListener("pointerleave", onLeave);
+      window.addEventListener("blur", onLeave);
+    }
+
+    return () => {
+      stop();
+      io.disconnect();
+      window.removeEventListener("resize", resize);
+      document.removeEventListener("visibilitychange", onVisibility);
+      if (finePointer) {
+        window.removeEventListener("pointermove", onMove);
+        document.removeEventListener("pointerleave", onLeave);
+        window.removeEventListener("blur", onLeave);
+      }
+    };
+  }, [reduce, tone]);
+
+  if (reduce) {
+    const palette = REACTIVE_FIELD_PALETTES[tone] || REACTIVE_FIELD_PALETTES.dark;
+    return (
+      <div
+        ref={containerRef}
+        className={`pointer-events-none absolute inset-0 ${className}`}
+        style={{ background: palette.staticBg }}
+        aria-hidden="true"
+      />
+    );
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`}
+      aria-hidden="true"
+    >
+      <canvas ref={canvasRef} className="block h-full w-full" />
+    </div>
   );
 }
 
@@ -761,6 +1016,245 @@ function HeroInterceptFeed({ lines }) {
   );
 }
 
+// Hero "flashlight in the dark" reveal. The OS sits in shadow like evidence
+// pinned to a wall; a single beam roams across it — auto-roaming clue to clue,
+// or chasing the pointer/touch on desktop — lighting up real product views one
+// at a time. Detective with a flashlight in the dark, finding what runs the
+// business underneath.
+// Each clue is rendered full-bleed and zoomed well beyond the beam diameter, so
+// the spotlight only ever reveals a cropped close-up of real UI detail. `pos`
+// chooses the focal region of that screen; `scale` controls the zoom; ax/ay are
+// the beam roam anchors (kept loosely aligned with the focal region).
+const SPOTLIGHT_LAYOUT = [
+  { ax: 38, ay: 28, pos: "22% 18%", scale: 1.08 },
+  { ax: 55, ay: 72, pos: "48% 78%", scale: 1.06 },
+  { ax: 48, ay: 42, pos: "50% 42%", scale: 1.05 },
+  { ax: 62, ay: 38, pos: "58% 35%", scale: 1.06 },
+  { ax: 70, ay: 26, pos: "74% 12%", scale: 1.04 },
+  { ax: 32, ay: 52, pos: "28% 48%", scale: 1.07 },
+  { ax: 58, ay: 58, pos: "52% 55%", scale: 1.08 },
+];
+
+const SPOTLIGHT_IMAGE_SIZES =
+  "(min-width: 1536px) 2400px, (min-width: 1024px) 1920px, (min-width: 640px) 1200px, 100vw";
+
+function SpotlightClueImage({ clue, layout }) {
+  const isHeroFlow = clue.src.includes("/product/hero-flow/");
+  const [hiResFailed, setHiResFailed] = useState(false);
+  const useOptionalHiRes = Boolean(clue.srcHiRes) && !hiResFailed;
+  const imageSrc = useOptionalHiRes ? clue.srcHiRes : clue.src;
+  const native = isHeroFlow || useOptionalHiRes;
+  const zoom = native ? layout.scale : Math.min(layout.scale, 1.02);
+
+  useEffect(() => {
+    setHiResFailed(false);
+  }, [clue.src, clue.srcHiRes]);
+
+  return (
+    <Image
+      src={imageSrc}
+      alt={`StudioFlows OS — ${clue.label}`}
+      fill
+      unoptimized={native}
+      quality={100}
+      priority={native}
+      sizes={SPOTLIGHT_IMAGE_SIZES}
+      className="object-cover"
+      onError={() => {
+        if (clue.srcHiRes) setHiResFailed(true);
+      }}
+      style={{
+        objectPosition: layout.pos,
+        transform: `scale(${zoom})`,
+      }}
+    />
+  );
+}
+
+function HeroSpotlightReveal({ clues, caption }) {
+  const reduce = useReducedMotion();
+  const boardRef = useRef(null);
+  const cards = SPOTLIGHT_LAYOUT.slice(0, clues.length).map((l, i) => ({
+    ...l,
+    ...clues[i],
+    layout: l,
+  }));
+
+  const [active, setActive] = useState(0);
+  const [hovering, setHovering] = useState(false);
+  const [radius, setRadius] = useState(150);
+
+  const tx = useMotionValue(cards[0]?.ax ?? 50);
+  const ty = useMotionValue(cards[0]?.ay ?? 42);
+  const sx = useSpring(tx, { stiffness: 70, damping: 19, mass: 0.8 });
+  const sy = useSpring(ty, { stiffness: 70, damping: 19, mass: 0.8 });
+
+  const mask = useMotionTemplate`radial-gradient(circle ${radius}px at ${sx}% ${sy}%, #000 0%, #000 88%, transparent 100%)`;
+  const glowLeft = useMotionTemplate`${sx}%`;
+  const glowTop = useMotionTemplate`${sy}%`;
+
+  useEffect(() => {
+    const set = () =>
+      setRadius(window.innerWidth < 640 ? 118 : window.innerWidth < 1024 ? 160 : 200);
+    set();
+    window.addEventListener("resize", set);
+    return () => window.removeEventListener("resize", set);
+  }, []);
+
+  // Auto-roam between clues when the operator isn't steering the beam.
+  useEffect(() => {
+    if (reduce || hovering || cards.length === 0) return undefined;
+    const id = window.setInterval(() => {
+      setActive((prev) => {
+        const next = (prev + 1) % cards.length;
+        tx.set(cards[next].ax);
+        ty.set(cards[next].ay);
+        return next;
+      });
+    }, 2600);
+    return () => window.clearInterval(id);
+  }, [reduce, hovering, cards.length, tx, ty]);
+
+  function handleMove(event) {
+    if (reduce) return;
+    const rect = boardRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const x = ((event.clientX - rect.left) / rect.width) * 100;
+    const y = ((event.clientY - rect.top) / rect.height) * 100;
+    tx.set(Math.max(4, Math.min(96, x)));
+    ty.set(Math.max(4, Math.min(96, y)));
+  }
+
+  // A single full-bleed, heavily-zoomed screen of the active clue. Because it is
+  // scaled well past the beam diameter, the spotlight only ever uncovers a
+  // cropped close-up of real UI detail rather than a shrunken whole page.
+  const activeCard = cards[active] ?? cards[0];
+  const board = (
+    <AnimatePresence mode="popLayout" initial={false}>
+      <motion.div
+        key={activeCard.src}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+        className="absolute inset-0"
+      >
+        <SpotlightClueImage clue={activeCard} layout={activeCard.layout} />
+      </motion.div>
+    </AnimatePresence>
+  );
+
+  return (
+    <div className="w-full font-mono">
+      <div className="mb-4 flex items-center gap-2.5 text-[9px] uppercase tracking-[0.28em] text-[#D4A853]/75">
+        <span className="relative flex h-1.5 w-1.5">
+          {!reduce ? (
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#D4A853]/55" />
+          ) : null}
+          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#D4A853]" />
+        </span>
+        {caption}
+        <span className="text-[#9B9894]/40">— restricted preview</span>
+      </div>
+
+      <div
+        ref={boardRef}
+        onPointerMove={handleMove}
+        onPointerEnter={(e) => {
+          if (e.pointerType === "mouse") setHovering(true);
+        }}
+        onPointerDown={() => setHovering(true)}
+        onPointerLeave={() => setHovering(false)}
+        onPointerUp={() => setHovering(false)}
+        className="relative h-[60svh] w-full overflow-hidden rounded-2xl border border-white/10 bg-black sm:h-[64svh] lg:h-[72vh]"
+        style={{ touchAction: "pan-y" }}
+        aria-label="A flashlight reveals the StudioFlows OS hidden in the dark"
+        role="img"
+      >
+        {reduce ? (
+          // Static, readable fallback: two cropped close-ups lit, no beam/roam.
+          <div className="absolute inset-0 grid grid-rows-2 gap-px bg-black">
+            {[cards[0], cards[6]].filter(Boolean).map((c) => (
+              <div key={c.src} className="relative overflow-hidden">
+                <SpotlightClueImage clue={c} layout={c.layout} />
+                <span className="absolute left-3 top-3 rounded bg-black/55 px-2 py-1 font-mono text-[8px] uppercase tracking-[0.18em] text-[#D4A853]/85 backdrop-blur-sm">
+                  {c.label}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <>
+            {/* Pitch black outside the beam — only the masked (lit) layer shows
+                any imagery; everything else is true #000. */}
+            <motion.div
+              className="absolute inset-0"
+              style={{ WebkitMaskImage: mask, maskImage: mask }}
+            >
+              {board}
+            </motion.div>
+
+            {/* Warm flashlight glow + soft edge ring. */}
+            <motion.div
+              className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 rounded-full mix-blend-screen"
+              style={{
+                left: glowLeft,
+                top: glowTop,
+                width: radius * 2,
+                height: radius * 2,
+                background:
+                  "radial-gradient(circle, transparent 56%, rgba(212,168,83,0.10) 78%, transparent 92%)",
+              }}
+            />
+            <motion.div
+              className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#D4A853]/25"
+              style={{
+                left: glowLeft,
+                top: glowTop,
+                width: radius * 2 * 0.62,
+                height: radius * 2 * 0.62,
+              }}
+            />
+          </>
+        )}
+
+        {/* Vignette + grain for the dark-room feel. */}
+        <div
+          className="pointer-events-none absolute inset-0 [box-shadow:inset_0_0_120px_rgba(0,0,0,0.85)]"
+          aria-hidden="true"
+        />
+
+        {/* Current clue caption. */}
+        {!reduce ? (
+          <div className="pointer-events-none absolute inset-x-3 bottom-3 z-10">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={active}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                className="inline-flex max-w-full flex-col rounded-lg border border-white/10 bg-black/55 px-3 py-2 backdrop-blur-sm"
+              >
+                <span className="font-mono text-[9px] uppercase tracking-[0.22em] text-[#D4A853]/85">
+                  {String(active + 1).padStart(2, "0")} · {cards[active]?.label}
+                </span>
+                <span className="mt-0.5 text-[11px] leading-4 text-[#C2BFBA]">
+                  {cards[active]?.hint}
+                </span>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        ) : null}
+      </div>
+
+      <p className="mt-3 text-[10px] leading-5 text-[#9B9894]/55">
+        {reduce ? "Real views from the StudioFlows OS." : "Move the light. Or watch it find the clues."}
+      </p>
+    </div>
+  );
+}
+
 function ContinuityAct1({ children }) {
   return (
     <div className="relative overflow-x-hidden bg-[#030304] text-[#E8E6E3]">
@@ -990,7 +1484,7 @@ export function InitiationHeroSection({ content }) {
 
         {/* Main content — headline / diamond / actions */}
         <motion.div
-          className="relative z-10 flex flex-1 flex-col justify-center gap-9 py-8 lg:grid lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:gap-14"
+          className="relative z-10 flex flex-1 flex-col justify-center gap-9 py-8 lg:grid lg:grid-cols-2 lg:items-center lg:gap-12"
           style={contentStyle}
         >
           {/* A — headline */}
@@ -1004,18 +1498,24 @@ export function InitiationHeroSection({ content }) {
             </div>
 
             <h1
-              id="initiation-hero-heading"
+          id="initiation-hero-heading"
               className="max-w-[13ch] font-serif text-[2.85rem] font-semibold leading-[0.9] tracking-[-0.045em] text-[#E8E6E3] sm:text-[4rem] lg:text-[5rem]"
             >
               <ScrambleText as="span" className="block" text="Your business" delayMs={300} />
               <ScrambleText as="span" className="block" text="knows when you" delayMs={1600} />
               <HeadlineDisappear className="block text-[#DB2777]" text="disappear." startDelayMs={3300} />
             </h1>
+            <p className="mt-5 max-w-md text-[15px] leading-7 text-[#C2BFBA] sm:mt-6 sm:text-base sm:leading-8 lg:max-w-lg">
+              {content.subheadline}
+            </p>
           </div>
 
-          {/* B — intercept feed */}
-          <div className="order-2 flex justify-start lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-center lg:justify-start lg:pl-6">
-            <HeroInterceptFeed lines={content.supportingCopy} />
+          {/* B — spotlight reveal: flashlight in the dark over the OS */}
+          <div className="order-2 flex w-full justify-start lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-center">
+            <HeroSpotlightReveal
+              clues={content.spotlight.clues}
+              caption={content.spotlight.caption}
+            />
           </div>
 
           {/* C — actions */}
@@ -1029,15 +1529,15 @@ export function InitiationHeroSection({ content }) {
                 href={content.primaryCtaTarget}
                 className="inline-flex min-h-[48px] items-center justify-center rounded-full bg-[#E8E6E3] px-7 py-3 text-sm font-semibold text-[#030304] transition hover:bg-white"
               >
-                {content.primaryCta}
-              </Link>
+            {content.primaryCta}
+          </Link>
               <Link
                 href={content.secondaryCtaTarget}
                 className="inline-flex min-h-[48px] items-center justify-center rounded-full border border-white/15 bg-white/[0.03] px-7 py-3 text-sm font-semibold text-[#E8E6E3] transition hover:border-[#DB2777]/40 hover:bg-[#DB2777]/[0.06]"
               >
-                {content.secondaryCta}
-              </Link>
-            </div>
+            {content.secondaryCta}
+          </Link>
+        </div>
           </div>
         </motion.div>
 
@@ -1064,7 +1564,7 @@ export function InitiationHeroSection({ content }) {
             </span>
           </div>
         </motion.footer>
-      </section>
+    </section>
     </ContinuityAct1>
   );
 }
@@ -1110,7 +1610,7 @@ function FounderCore({ count, total, full, reduce }) {
     <div className="flex flex-col items-center" style={{ perspective: 700 }}>
       <div ref={anchorRef} className="relative">
       <motion.div
-        className="relative grid h-44 w-44 place-items-center rounded-full sm:h-48 sm:w-48"
+        className="relative grid h-44 w-44 place-items-center rounded-full sm:h-48 sm:w-48 lg:h-96 lg:w-96"
         style={{
           background: `conic-gradient(#DB2777 ${deg}deg, rgba(255,255,255,0.05) ${deg}deg)`,
           transition: "background 0.5s ease",
@@ -1126,17 +1626,17 @@ function FounderCore({ count, total, full, reduce }) {
         {full && !reduce ? (
           <span className="absolute -inset-1 rounded-full ring-2 ring-[#DB2777]/40 animate-pulse" aria-hidden="true" />
         ) : null}
-        <div className="grid h-[9.5rem] w-[9.5rem] place-items-center rounded-full bg-[#070409] text-center shadow-[inset_0_0_44px_rgba(0,0,0,0.65)] sm:h-[10.5rem] sm:w-[10.5rem]">
+        <div className="grid h-[9.5rem] w-[9.5rem] place-items-center rounded-full bg-[#070409] text-center shadow-[inset_0_0_44px_rgba(0,0,0,0.65)] sm:h-[10.5rem] sm:w-[10.5rem] lg:h-[21rem] lg:w-[21rem]">
           <div>
-            <p className="font-mono text-[9px] uppercase tracking-[0.24em] text-[#9B9894]/55">
+            <p className="font-mono text-[9px] uppercase tracking-[0.24em] text-[#9B9894]/55 lg:text-[13px] lg:tracking-[0.3em]">
               routed through you
             </p>
-            <p className="mt-1 font-mono text-4xl font-semibold tabular-nums text-[#F3EFEC]">
+            <p className="mt-1 font-mono text-4xl font-semibold tabular-nums text-[#F3EFEC] lg:mt-3 lg:text-7xl">
               {String(count).padStart(2, "0")}
-              <span className="text-lg text-[#DB2777]/60">/0{total}</span>
+              <span className="text-lg text-[#DB2777]/60 lg:text-3xl">/0{total}</span>
             </p>
             <p
-              className={`mt-1 font-mono text-[9px] uppercase tracking-[0.24em] ${
+              className={`mt-1 font-mono text-[9px] uppercase tracking-[0.24em] lg:mt-3 lg:text-[13px] lg:tracking-[0.3em] ${
                 full ? "text-[#DB2777]" : "text-[#9B9894]/45"
               }`}
             >
@@ -1146,7 +1646,7 @@ function FounderCore({ count, total, full, reduce }) {
         </div>
       </motion.div>
       </div>
-      <p className="mt-6 max-w-[230px] text-center text-sm leading-6 text-[#9B9894]/75">
+      <p className="mt-6 max-w-[230px] text-center text-sm leading-6 text-[#9B9894]/75 lg:mt-8 lg:max-w-[300px] lg:text-base lg:leading-7">
         {full
           ? "Every signal terminates at one person. That is not a workflow. That is you."
           : "The founder quietly became the operating layer. Trace where each signal really goes."}
@@ -1252,7 +1752,7 @@ export function InitiationFounderPainSection({ content }) {
               <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#DB2777]" />
             </span>
             <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-[#9B9894]/60">
-              01 / recognition — scanning
+              01 / operational weight
             </p>
           </div>
 
@@ -1262,8 +1762,8 @@ export function InitiationFounderPainSection({ content }) {
               id="initiation-founder-pain-heading"
               className="mt-6 max-w-xl font-serif text-3xl font-semibold leading-[1.02] tracking-[-0.035em] text-[#E8E6E3] sm:text-4xl"
             >
-              {content.headline}
-            </RevealLine>
+            {content.headline}
+          </RevealLine>
           </motion.div>
 
           <p className="mt-7 font-mono text-[11px] uppercase tracking-[0.18em] text-[#DB2777]/55">
@@ -1532,7 +2032,7 @@ export function InitiationDependencySelectorSection({ content }) {
         <div className="relative mx-auto grid max-w-7xl gap-10 px-5 sm:px-8 lg:grid-cols-[0.78fr_1.22fr] lg:items-center lg:gap-14">
           <div>
             <div className="flex items-center gap-3">
-              <p className="font-mono text-xs uppercase tracking-[0.3em] text-[#DB2777]/75">02 / the mirror</p>
+              <p className="font-mono text-xs uppercase tracking-[0.3em] text-[#DB2777]/75">02 / what still depends on you</p>
               <span className="h-px flex-1 bg-gradient-to-r from-[#DB2777]/30 to-transparent" />
             </div>
 
@@ -1540,8 +2040,8 @@ export function InitiationDependencySelectorSection({ content }) {
               id="initiation-dependency-heading"
               className="mt-6 font-serif text-4xl font-semibold leading-[1.0] tracking-[-0.04em] text-[#F3EFEC] sm:text-5xl lg:text-6xl"
             >
-              {content.title}
-            </h2>
+            {content.title}
+          </h2>
 
             <p className="mt-5 max-w-md text-base leading-8 text-[#9B9894] sm:text-[17px]">{content.prompt}</p>
 
@@ -1718,8 +2218,8 @@ export function InitiationDependencySelectorSection({ content }) {
                           />
                         ) : null}
                       </motion.button>
-                    );
-                  })}
+              );
+            })}
 
                   <svg
                     viewBox="0 0 100 100"
@@ -1785,7 +2285,7 @@ export function InitiationDependencySelectorSection({ content }) {
               )}
             </motion.div>
           </motion.div>
-        </div>
+          </div>
       </RevealSection>
     </section>
   );
@@ -1978,54 +2478,165 @@ function ConfessionRealityBreak({ surface, breakLine, scattered }) {
   );
 }
 
-// Eerie watcher for the confession's dead left column (desktop only): the dusty
-// CRT that "everyone saw" — pinned, dead static, scanlines, a slow vertical roll
-// and a ghost that bleeds in and out as the section scrolls. The screen reads
-// STATUS: NOMINAL over a flatline — the calm lie, made visible. Reduced-motion:
-// a still, dim screen. Purely atmospheric (aria-hidden).
-function FounderCrtTv({ progressTarget }) {
+// Eerie watcher for the confession cascade: dusty CRT with scanlines. Optional
+// `broadcastLines` cycles copy on the glass (desktop "on air" beat). Reduced-motion:
+// static frame. Purely decorative when aria-hidden; broadcast mode exposes live text.
+function FounderCrtTvBroadcast({ lines, reduce, inView }) {
+  const [active, setActive] = useState(0);
+  const [flicker, setFlicker] = useState(false);
+
+  useEffect(() => {
+    if (reduce || !inView || lines.length === 0) return undefined;
+    const id = window.setInterval(() => {
+      setFlicker(true);
+      setActive((a) => (a + 1) % lines.length);
+      window.setTimeout(() => setFlicker(false), 120);
+    }, 3400);
+    return () => window.clearInterval(id);
+  }, [reduce, inView, lines.length]);
+
+  if (reduce) {
+    return (
+      <div className="absolute inset-0 flex flex-col justify-end p-[10%] pb-[12%]">
+        <p className="font-mono text-[9px] uppercase tracking-[0.28em] text-[#6FB58E]/80">on air</p>
+        <div className="mt-2 space-y-1">
+          {lines.map((line, i) => (
+            <p
+              key={line}
+              className={`font-mono text-[10px] leading-snug text-[#6FB58E]/90 ${i === lines.length - 1 ? "opacity-100" : "opacity-55"}`}
+            >
+              {String(i + 1).padStart(2, "0")} {line}
+            </p>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="absolute inset-0 grid grid-rows-[auto_1fr_auto] px-[7%] pb-[6%] pt-[5%]"
+      aria-live="polite"
+      aria-atomic="true"
+    >
+      <div className="flex items-center justify-between gap-1">
+        <span className="font-mono text-[clamp(6px,3.2cqw,11px)] uppercase tracking-[0.22em] text-[#6FB58E]/90 [text-shadow:0_0_8px_rgba(111,181,142,0.65)]">
+          ● on air
+        </span>
+        <span className="font-mono text-[clamp(5px,2.6cqw,9px)] uppercase tracking-[0.14em] text-[#6FB58E]/55">
+          founder channel
+        </span>
+      </div>
+
+      <div className="relative flex min-h-0 flex-col justify-end self-stretch">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={active}
+            initial={{ opacity: 0, y: 6, filter: "blur(4px)" }}
+            animate={{
+              opacity: flicker ? [1, 0.72, 1] : 1,
+              y: 0,
+              filter: "blur(0px)",
+            }}
+            exit={{ opacity: 0, y: -5, filter: "blur(3px)" }}
+            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+            className="flex flex-col justify-end"
+          >
+            <span className="font-mono text-[clamp(7px,3.4cqw,12px)] tabular-nums text-[#DB2777]/75">
+              {String(active + 1).padStart(2, "0")}
+            </span>
+            <p className="mt-0.5 font-mono text-[clamp(8px,4.2cqw,15px)] leading-[1.25] text-[#8FE8B0] [text-shadow:0_0_10px_rgba(111,181,142,0.55)]">
+              {lines[active]}
+            </p>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      <div className="mt-1.5 flex shrink-0 gap-0.5">
+        {lines.map((line, i) => (
+          <span
+            key={line}
+            className={`h-1 flex-1 rounded-full transition-colors duration-300 ${
+              i === active ? "bg-[#6FB58E]/85" : "bg-[#6FB58E]/20"
+            }`}
+            aria-hidden="true"
+          />
+              ))}
+            </div>
+    </div>
+  );
+}
+
+function FounderCrtTv({ progressTarget, broadcastLines, stage = false }) {
   const reduce = useReducedMotion();
+  const wrapRef = useRef(null);
+  const inView = useInView(wrapRef, { once: false, margin: "-20% 0px" });
   const { scrollYProgress } = useScroll({
     target: progressTarget,
     offset: ["start end", "end start"],
   });
-  const y = useTransform(scrollYProgress, [0, 1], reduce ? ["0%", "0%"] : ["-7%", "7%"]);
-  // The TV now sits low in the section, so it's on screen in the latter part of
-  // the scroll — peak the ghost there.
+  const onAir = Boolean(broadcastLines?.length);
+  const y = useTransform(
+    scrollYProgress,
+    [0, 1],
+    reduce || onAir ? ["0%", "0%"] : ["-4%", "4%"]
+  );
   const ghost = useTransform(scrollYProgress, [0.45, 0.62, 0.85, 0.98], [0, 0.92, 0.92, 0]);
   const ghostX = useTransform(scrollYProgress, [0, 1], reduce ? [0, 0] : [-7, 7]);
-  // Screen-glass rectangle inside the TV photo (percentages, tuned to the asset).
-  const screen = { left: "13.5%", top: "31.5%", width: "59%", height: "36%" };
+  // Pixel-mapped to crt-tv.png (682×1024) inner glass — audit: x 25–547, y 285–531.
+  const screen = {
+    left: "3.67%",
+    top: "27.83%",
+    width: "76.54%",
+    height: "25.1%",
+  };
 
   return (
-    <div className="relative hidden lg:mt-auto lg:block lg:pl-5" aria-hidden="true">
+    <div
+      ref={wrapRef}
+      className={`relative mx-auto w-full ${
+        stage
+          ? "max-w-[280px] sm:max-w-[340px] lg:max-w-[520px] xl:max-w-[620px] 2xl:max-w-[680px]"
+          : "max-w-[240px] sm:max-w-[280px]"
+      }`}
+      aria-hidden={onAir ? undefined : "true"}
+    >
       <div
-        className="pointer-events-none absolute inset-x-0 bottom-6 h-40 bg-[radial-gradient(ellipse_at_center,rgba(219,39,119,0.14),transparent_70%)] blur-2xl"
+        className="pointer-events-none absolute inset-x-0 bottom-6 h-32 bg-[radial-gradient(ellipse_at_center,rgba(219,39,119,0.14),transparent_70%)] blur-2xl lg:h-48 xl:h-56"
       />
       <motion.div style={{ y }} className="relative">
-        <div className="relative aspect-[4/5] w-full overflow-hidden">
+        <div className="relative aspect-[682/1024] w-full">
           <Image
-            src="/founder/crt-tv.jpg"
+            src="/founder/crt-tv.png"
             alt=""
             fill
-            sizes="(min-width: 1024px) 360px, 1px"
+            sizes={
+              stage
+                ? "(min-width: 1536px) 680px, (min-width: 1280px) 620px, (min-width: 1024px) 520px, (min-width: 640px) 340px, 280px"
+                : "(min-width: 640px) 280px, 240px"
+            }
             className="select-none object-contain"
-            style={{
-              // Feather the photo's dark surround into the page so there's no
-              // visible rectangle around the TV (no mix-blend trick needed).
-              WebkitMaskImage:
-                "radial-gradient(115% 115% at 50% 50%, #000 58%, transparent 90%)",
-              maskImage:
-                "radial-gradient(115% 115% at 50% 50%, #000 58%, transparent 90%)",
-            }}
           />
 
-          {/* live screen */}
+          {/* live screen — mapped to CRT glass (682×1024 asset audit) */}
           <div
-            className="absolute overflow-hidden rounded-[10%]"
-            style={screen}
+            className="absolute overflow-hidden [container-type:size] [transform-origin:50%_46%]"
+            style={{
+              ...screen,
+              borderRadius: "6% 6% 8% 8% / 17% 17% 21% 21%",
+              transform: "perspective(1400px) rotateX(1.25deg)",
+            }}
           >
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(34,42,38,0.95),rgba(5,6,8,1)_72%)]" />
+            {onAir ? (
+              <div
+                className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_88%_80%_at_50%_42%,rgba(111,181,142,0.16),transparent_72%)]"
+                aria-hidden="true"
+              />
+          ) : null}
+            <div
+              className="absolute inset-0 bg-black/15"
+              aria-hidden="true"
+            />
 
             {!reduce ? (
               <motion.div
@@ -2057,39 +2668,56 @@ function FounderCrtTv({ progressTarget }) {
               />
             ) : null}
 
-            <motion.div
-              style={{ opacity: reduce ? 0.24 : ghost, x: ghostX }}
-              className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-3"
-            >
-              <span className="font-mono text-[8px] uppercase tracking-[0.34em] text-[#6FB58E]/85 [text-shadow:0_0_8px_rgba(111,181,142,0.7)]">
-                status: nominal
-              </span>
-              <svg viewBox="0 0 100 20" className="w-4/5 text-[#6FB58E]/75" fill="none">
-                <motion.path
-                  d="M0 10 H38 l2.5 -7 l2 9 l2.5 -8 l2 6 H100"
-                  stroke="currentColor"
-                  strokeWidth="1.1"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={{ filter: "drop-shadow(0 0 4px rgba(111,181,142,0.6))" }}
-                  animate={reduce ? {} : { opacity: [0.55, 1, 0.55] }}
-                  transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
-                />
-              </svg>
-            </motion.div>
+            {onAir ? (
+              <FounderCrtTvBroadcast lines={broadcastLines} reduce={reduce} inView={inView} />
+            ) : (
+              <motion.div
+                style={{ opacity: reduce ? 0.24 : ghost, x: ghostX }}
+                className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-3"
+              >
+                <span className="font-mono text-[8px] uppercase tracking-[0.34em] text-[#6FB58E]/85 [text-shadow:0_0_8px_rgba(111,181,142,0.7)]">
+                  status: nominal
+                </span>
+                <svg viewBox="0 0 100 20" className="w-4/5 text-[#6FB58E]/75" fill="none">
+                  <motion.path
+                    d="M0 10 H38 l2.5 -7 l2 9 l2.5 -8 l2 6 H100"
+                    stroke="currentColor"
+                    strokeWidth="1.1"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{ filter: "drop-shadow(0 0 4px rgba(111,181,142,0.6))" }}
+                    animate={reduce ? {} : { opacity: [0.55, 1, 0.55] }}
+                    transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+                  />
+                </svg>
+              </motion.div>
+            )}
 
-            {/* glass curvature + vignette */}
+            {/* glass curvature + vignette — soft edge blend into bezel */}
             <div
-              className="absolute inset-0"
-              style={{ boxShadow: "inset 0 0 34px 8px rgba(0,0,0,0.85)" }}
+              className="pointer-events-none absolute inset-0"
+              style={{
+                boxShadow:
+                  "inset 0 0 28px 12px rgba(0,0,0,0.48), inset 0 10px 22px rgba(255,255,255,0.03)",
+              }}
+            />
+            <div
+              className="pointer-events-none absolute inset-0 opacity-[0.14]"
+              style={{
+                background:
+                  "radial-gradient(ellipse 94% 90% at 50% 44%, rgba(255,255,255,0.1), transparent 72%)",
+              }}
+              aria-hidden="true"
             />
           </div>
         </div>
       </motion.div>
 
-      <p className="mt-4 text-center font-mono text-[10px] uppercase tracking-[0.28em] text-[#9B9894]/35">
-        the channel no one switched off
-      </p>
+      {!onAir ? (
+        <p className="mt-4 text-center font-mono text-[10px] uppercase tracking-[0.28em] text-[#9B9894]/35">
+          the channel no one switched off
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -2119,87 +2747,89 @@ export function InitiationFounderStorySection({ content }) {
 
       <RevealSection>
         <div className="relative mx-auto max-w-7xl px-5 sm:px-8">
-          <div className="grid gap-12 lg:grid-cols-[0.76fr_1.24fr] lg:gap-16">
-            <aside className="lg:flex lg:flex-col">
-              <div className="border-l border-[#DB2777]/25 pl-5 lg:sticky lg:top-24">
-                <p className="font-mono text-xs uppercase tracking-[0.28em] text-[#DB2777]/70">
-                  03 / the private version
-                </p>
-                <p className="mt-3 max-w-xs text-sm uppercase tracking-[0.22em] text-[#9B9894]/70">
-                  The business looked strong from the outside.
-                </p>
+          {/* Chapter opener — one definitive section header, not a floating sidebar */}
+          <header className="max-w-4xl border-l-2 border-[#DB2777]/35 pl-5 sm:pl-6">
+            <p className="font-mono text-xs uppercase tracking-[0.28em] text-[#DB2777]/70">
+              03 / founder story
+            </p>
+          <RevealLine
+            as="h2"
+            id="initiation-founder-story-heading"
+              className="mt-5 font-serif text-3xl font-semibold leading-[1.02] tracking-[-0.035em] text-[#F3EFEC] sm:text-4xl lg:text-5xl"
+          >
+            {content.headline}
+          </RevealLine>
+            <p className="mt-8 max-w-3xl text-lg leading-8 text-[#E8E6E3] sm:text-xl sm:leading-9">
+              {body[0]}
+            </p>
+          </header>
 
-                <div className="mt-8 rounded-2xl border border-white/[0.08] bg-black/[0.3] p-5">
-                  <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-[#DB2777]/65">
-                    Behind the scenes
-                  </p>
-                  <p className="mt-3 text-sm leading-6 text-[#B8B5B0]">Being busy wasn't being in control.</p>
-                </div>
-              </div>
+          {/* 03a — the surface (fake calm → break → scattered truth) */}
+          <div className="mt-16 sm:mt-20">
+            <p className="font-mono text-[11px] uppercase tracking-[0.26em] text-[#9B9894]/55">
+              03a / from the outside
+            </p>
+            <p className="mt-2 text-sm uppercase tracking-[0.2em] text-[#9B9894]/65">
+              The business looked strong from the outside.
+            </p>
+            <ConfessionRealityBreak surface={surface} breakLine={breakLine} scattered={scattered} />
+          </div>
 
-              <FounderCrtTv progressTarget={sectionRef} />
-            </aside>
+          {/* 03b — the cascade (copy left, CRT broadcast in the old stack slot) */}
+          <div className="mt-20 border-t border-white/[0.08] pt-16 sm:mt-24 sm:pt-20">
+            <p className="font-mono text-[11px] uppercase tracking-[0.26em] text-[#DB2777]/65">
+              03b / when handoffs slip
+            </p>
 
-            <div>
-              <RevealLine
-                as="h2"
-                id="initiation-founder-story-heading"
-                className="max-w-4xl font-serif text-3xl font-semibold leading-[1.02] tracking-[-0.035em] text-[#F3EFEC] sm:text-4xl lg:text-5xl"
-              >
-                {content.headline}
-              </RevealLine>
-
-              <p className="mt-10 max-w-3xl text-xl leading-9 tracking-[-0.015em] text-[#E8E6E3] sm:text-2xl">
-                {body[0]}
-              </p>
-
-              <ConfessionRealityBreak surface={surface} breakLine={breakLine} scattered={scattered} />
-
-              <div className="mt-16 border-l-2 border-[#DB2777]/40 pl-6">
-                <p className="text-lg leading-8 text-[#9B9894]">{movement[0]}</p>
-                <p className="mt-2 text-2xl font-semibold leading-9 tracking-[-0.02em] text-[#F3EFEC] sm:text-3xl">
+            <div className="mt-8 lg:mt-10 lg:grid lg:grid-cols-[minmax(0,0.94fr)_minmax(0,1.06fr)] lg:items-center lg:gap-10 xl:gap-14">
+              <div className="max-w-xl lg:max-w-none lg:pr-4">
+                <p className="text-sm leading-6 text-[#9B9894] sm:text-base">{movement[0]}</p>
+                <p className="mt-2 text-lg font-semibold leading-8 tracking-[-0.02em] text-[#F3EFEC] sm:text-xl lg:mt-3">
                   {movement[1]}
                 </p>
               </div>
 
-              <div className="mt-12 space-y-px overflow-hidden rounded-2xl border border-white/[0.08]">
-                {consequenceChain.map((line, index) => (
-                  <div
-                    key={line}
-                    className="flex items-start gap-4 bg-white/[0.02] px-5 py-4"
-                  >
-                    <span className="mt-1 font-mono text-[10px] tabular-nums text-[#DB2777]/50">
-                      {String(index + 1).padStart(2, "0")}
-                    </span>
-                    <p className="text-base leading-7 text-[#B8B5B0]">{line}</p>
-                  </div>
-                ))}
+              <div className="mt-8 flex justify-center sm:mt-10 lg:mt-0 lg:justify-end lg:self-center">
+                <div className="w-full max-w-[320px] sm:max-w-[360px] lg:max-w-none">
+                  <FounderCrtTv
+                    progressTarget={sectionRef}
+                    broadcastLines={consequenceChain}
+                    stage
+                  />
+                  <p className="mt-3 text-center font-mono text-[9px] uppercase tracking-[0.24em] text-[#9B9894]/40 sm:text-[10px] lg:text-right">
+                    the channel no one switched off
+                  </p>
+                </div>
               </div>
-
-              {(() => {
-                // Ransom carries only the gut-punch kernel — massive. The rest of
-                // the locked sentence stays in clean, readable type around it.
-                const truthLine = finalTruth[finalTruth.length - 1];
-                const KERNEL = "not strong enough";
-                const idx = truthLine.indexOf(KERNEL);
-                const pre = idx >= 0 ? truthLine.slice(0, idx).trim() : truthLine;
-                const post = idx >= 0 ? truthLine.slice(idx + KERNEL.length).trim() : "";
-                return (
-                  <div className="mt-16 rounded-[2rem] border border-[#DB2777]/15 bg-[#120A10]/40 p-6 shadow-[0_30px_120px_rgba(0,0,0,0.35)] sm:p-8 lg:p-10">
-                    <p className="text-base leading-8 text-[#9B9894]">{finalTruth[0]}</p>
-                    {pre ? (
-                      <p className="mt-8 max-w-2xl text-xl leading-9 text-[#C2BFBA] sm:text-2xl">{pre}</p>
-                    ) : null}
-                    <div className="mt-4 text-[2.4rem] leading-[1.02] sm:text-[3.75rem] lg:text-[5.25rem]">
-                      <RansomText text={KERNEL} baseSize={1} scrollReveal />
-                    </div>
-                    {post ? (
-                      <p className="mt-5 max-w-2xl text-xl leading-9 text-[#C2BFBA] sm:text-2xl">{post}</p>
-                    ) : null}
-                  </div>
-                );
-              })()}
             </div>
+          </div>
+
+          {/* 03c — the truth (section climax — still part 03, not a transition) */}
+          <div className="mt-16 border-t border-[#DB2777]/20 pt-16 sm:mt-20 sm:pt-20">
+            <p className="font-mono text-[11px] uppercase tracking-[0.26em] text-[#DB2777]/65">
+              03c / what broke
+            </p>
+            {(() => {
+              const truthLine = finalTruth[finalTruth.length - 1];
+              const KERNEL = "not strong enough";
+              const idx = truthLine.indexOf(KERNEL);
+              const pre = idx >= 0 ? truthLine.slice(0, idx).trim() : truthLine;
+              const post = idx >= 0 ? truthLine.slice(idx + KERNEL.length).trim() : "";
+              return (
+                <div className="mt-8 rounded-[2rem] border border-[#DB2777]/15 bg-[#120A10]/40 p-6 shadow-[0_30px_120px_rgba(0,0,0,0.35)] sm:p-8 lg:p-10">
+                  <p className="text-base leading-8 text-[#9B9894]">{finalTruth[0]}</p>
+                  {pre ? (
+                    <p className="mt-8 max-w-2xl text-xl leading-9 text-[#C2BFBA] sm:text-2xl">{pre}</p>
+                  ) : null}
+                  <div className="mt-4 text-[2.4rem] leading-[1.02] sm:text-[3.75rem] lg:text-[5.25rem]">
+                    <RansomText text={KERNEL} baseSize={1} scrollReveal />
+                  </div>
+                  {post ? (
+                    <p className="mt-5 max-w-2xl text-xl leading-9 text-[#C2BFBA] sm:text-2xl">{post}</p>
+                  ) : null}
+                </div>
+              );
+            })()}
           </div>
         </div>
       </RevealSection>
@@ -2378,7 +3008,7 @@ function RansomText({ text, className = "", baseSize = 1.6, scrollReveal = false
   ACT I · THE WEIGHT (near-black, magenta pressure) — dig the pain.
     Hero · 01 Recognition · 02 Mirror · 03 Confession
   ACT II · THE TURN (black, amber intelligence + first amber) — the reveal.
-    04 Reframe · 05 Category · 06 System appears (eyes / light pivot)
+    04 Reframe · 05 Category · 06 System appears (sunrise dashboard / light pivot)
   ACT III · LIGHTER TO OPERATE (graphite warming to bone) — proof → relief.
     07 Friday · 08 Compounding · 09 Confidence · 10 Pillars
     11 Diagnostic · 12 Entry · 13 Final CTA (full light payoff)
@@ -2391,19 +3021,23 @@ function RansomText({ text, className = "", baseSize = 1.6, scrollReveal = false
 // Smoky seam: soft fade to near-black at top and bottom so adjacent dark
 // sections dissolve into each other instead of meeting at a hard line. Tall and
 // translucent on purpose — the transitions should feel murky, not organized.
-function SectionBleed({ strength = 0.7 }) {
+function SectionBleed({ strength = 0.7, top = true, bottom = true }) {
   return (
     <>
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-32 sm:h-40"
-        style={{ background: `linear-gradient(to bottom, rgba(3,3,4,${strength}), transparent)` }}
-        aria-hidden="true"
-      />
-      <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-32 sm:h-40"
-        style={{ background: `linear-gradient(to top, rgba(3,3,4,${strength}), transparent)` }}
-        aria-hidden="true"
-      />
+      {top ? (
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-32 sm:h-40"
+          style={{ background: `linear-gradient(to bottom, rgba(3,3,4,${strength}), transparent)` }}
+          aria-hidden="true"
+        />
+      ) : null}
+      {bottom ? (
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-32 sm:h-40"
+          style={{ background: `linear-gradient(to top, rgba(3,3,4,${strength}), transparent)` }}
+          aria-hidden="true"
+        />
+      ) : null}
     </>
   );
 }
@@ -2569,9 +3203,18 @@ function StorySection({ id, index, label, accent = "#DB2777", bg = "#0A0A11", as
 
 // ── 04 REFRAME · "That is dependency." ───────────────────────────────────────
 // UNIQUE (Layer 3): the founder-roles stack ONTO one figure and physically pile
-// up (weight) until the word "scale" buckles into "dependency." Mind-fuck:
-// success reframed as a trap. Verdict lands in clean type after the pile-up.
-export function InitiationContinuityReframeSection({ content }) {
+// up (weight) until "Scale it!" scatters the pile — growth breaks a one-person
+// system. Verdict lands in clean type after the collapse.
+const REFRAME_SCATTER = [
+  { x: -34, y: -18, rotate: -14, scale: 0.9 },
+  { x: 28, y: -26, rotate: 11, scale: 0.88 },
+  { x: -10, y: 8, rotate: 8, scale: 0.92 },
+  { x: 36, y: -4, rotate: -10, scale: 0.86 },
+  { x: -40, y: 16, rotate: 15, scale: 0.84 },
+  { x: 6, y: 22, rotate: -12, scale: 0.9 },
+];
+
+export function InitiationContinuityReframeSection({ content, inlineCta }) {
   const reduce = useReducedMotion();
   const { mark } = useProgression();
   const sectionRef = useRef(null);
@@ -2621,12 +3264,20 @@ export function InitiationContinuityReframeSection({ content }) {
     <section
       ref={sectionRef}
       aria-labelledby="initiation-continuity-heading"
-      className="relative z-10 scroll-mt-24 overflow-hidden bg-[#09090F] py-24 sm:py-28 lg:py-32"
+      className="relative z-10 scroll-mt-24 overflow-hidden bg-transparent py-24 sm:py-28 lg:py-32"
     >
-      <SectionBleed />
+      <SectionBleed top />
       <SectionGlitchOverlay accent="#DB2777" />
       <div
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(219,39,119,0.08),transparent_32%)]"
+        aria-hidden="true"
+      />
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] h-40 sm:h-48"
+        style={{
+          background:
+            "linear-gradient(to bottom, transparent 0%, rgba(3,3,4,0.45) 55%, rgba(3,3,4,0.92) 100%)",
+        }}
         aria-hidden="true"
       />
 
@@ -2634,108 +3285,178 @@ export function InitiationContinuityReframeSection({ content }) {
         <div className="relative mx-auto max-w-5xl px-5 sm:px-8">
           <div className="mx-auto max-w-4xl text-center">
             <p className="font-mono text-xs uppercase tracking-[0.28em] text-[#DB2777]/75">
-              04 / the reframe
+              04 / operational continuity
             </p>
             <h2
               id="initiation-continuity-heading"
               className="mt-7 font-serif text-4xl font-semibold leading-[0.98] tracking-[-0.045em] text-[#F3EFEC] sm:text-5xl lg:text-6xl"
             >
-              {content.headline}
-            </h2>
-            <RevealLine
-              as="p"
+            {content.headline}
+          </h2>
+          <RevealLine
+            as="p"
               delayMs={120}
               className="mx-auto mt-7 max-w-3xl text-2xl font-semibold leading-tight tracking-[-0.035em] text-[#D4A853] sm:text-3xl lg:text-4xl"
-            >
-              {content.subheadline}
-            </RevealLine>
+          >
+            {content.subheadline}
+          </RevealLine>
           </div>
 
-          {/* THE PILE — responsibilities stack onto one bearer until it buckles */}
-          <div className="relative mx-auto mt-14 max-w-lg" style={{ perspective: 1000 }}>
+          {/* THE PILE — responsibilities stack, then scatter when you try to scale */}
+          <div className="relative mx-auto mt-14 w-full max-w-md sm:max-w-lg lg:max-w-xl" style={{ perspective: 1000 }}>
             <div className="mb-5 flex items-center gap-3 font-mono text-[10px] uppercase tracking-[0.24em]">
-              <span style={{ color: fullyLoaded ? "#DB2777" : "#9B9894" }}>load</span>
-              <span className="h-1 flex-1 overflow-hidden rounded-full bg-white/10">
+              <span style={{ color: buckled ? "#DB2777" : fullyLoaded ? "#DB2777" : "#9B9894" }}>
+                {buckled ? "overload" : "load"}
+              </span>
+              <span className="relative h-1 flex-1 overflow-hidden rounded-full bg-white/10">
                 <motion.span
                   className="block h-full rounded-full"
-                  style={{ backgroundColor: fullyLoaded ? "#DB2777" : "#D4A853" }}
-                  animate={{ width: `${loadPct}%` }}
+                  style={{ backgroundColor: buckled ? "#DB2777" : fullyLoaded ? "#DB2777" : "#D4A853" }}
+                  animate={{ width: buckled ? "100%" : `${loadPct}%` }}
                   transition={{ ease: "easeOut", duration: 0.4 }}
                 />
+                {buckled && !reduce ? (
+                  <motion.span
+                    className="absolute inset-y-0 right-0 w-[18%] rounded-full bg-[#DB2777]/50"
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: [0.4, 0.85, 0.4], x: [0, 4, 0] }}
+                    transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
+                    aria-hidden="true"
+                  />
+                ) : null}
               </span>
-              <span style={{ color: fullyLoaded ? "#DB2777" : "#9B9894" }}>{loadPct}%</span>
+              <span style={{ color: buckled ? "#DB2777" : fullyLoaded ? "#DB2777" : "#9B9894" }}>
+                {buckled ? "fail" : `${loadPct}%`}
+              </span>
             </div>
 
             <motion.div
-              style={{ y: drift, transformOrigin: "bottom" }}
+              style={{ y: drift, transformOrigin: "center bottom" }}
               animate={
-                buckled
-                  ? { scaleY: reduce ? 1 : 0.8, y: reduce ? 0 : 12 }
-                  : fullyLoaded && !reduce
+                buckled && !reduce
+                  ? { x: [0, -2, 2, -1, 0], y: 0 }
+                  : fullyLoaded && !reduce && !buckled
                     ? { x: [0, -1.5, 1.5, -1, 0] }
                     : {}
               }
               transition={
-                buckled
-                  ? { duration: 0.5, ease: [0.16, 1, 0.3, 1] }
+                buckled && !reduce
+                  ? { x: { duration: 0.35, ease: "easeOut" }, y: { duration: 0.55, ease: [0.16, 1, 0.3, 1] } }
                   : { duration: 0.45, repeat: Infinity, repeatDelay: 1.6 }
               }
             >
-              <div className="flex flex-col gap-1.5">
-                {roles.map((_, i) => {
-                  const idx = roles.length - 1 - i;
-                  const role = roles[idx];
-                  const on = idx < loaded;
-                  const tilt = tilts[idx] || 0;
-                  return (
-                    <motion.div
-                      key={role}
-                      initial={false}
-                      animate={
-                        on
-                          ? { opacity: 1, y: 0, rotate: buckled ? 0 : tilt, scaleY: buckled ? 0.9 : 1 }
-                          : { opacity: 0, y: -26, rotate: tilt * 2 }
-                      }
-                      transition={{ type: "spring", stiffness: 260, damping: 18 }}
-                      className="rounded-lg border border-white/[0.1] bg-gradient-to-b from-white/[0.07] to-white/[0.02] px-4 py-3"
-                      style={{ boxShadow: "0 8px 20px rgba(0,0,0,0.4)" }}
-                    >
-                      <p className="text-sm leading-6 text-[#D8D4CE] sm:text-[15px]">{role}</p>
-                    </motion.div>
-                  );
-                })}
-              </div>
-
-              <motion.div
-                className="relative mt-1.5 overflow-hidden rounded-lg border border-[#DB2777]/30 bg-[#DB2777]/[0.06]"
-                style={{ transformOrigin: "bottom" }}
-                animate={{ scaleY: buckled ? (reduce ? 0.7 : 0.5) : 1 - (loaded / roles.length) * 0.4 }}
-                transition={{ ease: "easeOut", duration: 0.4 }}
+              <div
+                className={
+                  buckled
+                    ? "relative flex min-h-[360px] flex-col sm:min-h-[380px]"
+                    : "relative flex flex-col gap-1.5"
+                }
               >
-                <div className="flex items-center justify-between px-4 py-4">
-                  <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-[#DB2777]">
-                    the founder
-                  </span>
-                  <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#DB2777]/70">
-                    {buckled ? "buckling" : "bearing the load"}
-                  </span>
+                <div
+                  className={
+                    buckled
+                      ? "relative mx-auto flex min-h-[240px] w-full max-w-[340px] flex-1 items-center justify-center sm:min-h-[260px]"
+                      : "relative flex flex-col gap-1.5"
+                  }
+                >
+                  {roles.map((_, i) => {
+                    const idx = roles.length - 1 - i;
+                    const role = roles[idx];
+                    const on = idx < loaded;
+                    const tilt = tilts[idx] || 0;
+                    const scatter = REFRAME_SCATTER[idx] || REFRAME_SCATTER[0];
+                    return (
+                      <motion.div
+                        key={role}
+                        initial={false}
+                        animate={
+                          !on
+                            ? { opacity: 0, y: -26, rotate: tilt * 2, x: 0, scale: 1 }
+                            : buckled
+                              ? {
+                                  opacity: 0.92,
+                                  x: scatter.x,
+                                  y: scatter.y,
+                                  rotate: scatter.rotate,
+                                  scale: scatter.scale,
+                                }
+                              : { opacity: 1, y: 0, x: 0, rotate: tilt, scale: 1 }
+                        }
+                        transition={
+                          buckled
+                            ? { type: "spring", stiffness: 420, damping: 22, delay: idx * 0.04 }
+                            : { type: "spring", stiffness: 260, damping: 18 }
+                        }
+                        className={`rounded-lg border px-4 py-3 ${
+                          buckled
+                            ? "absolute left-1/2 top-1/2 w-[88%] max-w-[320px] -translate-x-1/2 -translate-y-1/2 border-[#DB2777]/35 bg-gradient-to-b from-[#1a0a12]/90 to-[#0a0608]/95 shadow-[0_16px_40px_rgba(0,0,0,0.55)] sm:max-w-[340px]"
+                            : "border-white/[0.1] bg-gradient-to-b from-white/[0.07] to-white/[0.02]"
+                        }`}
+                        style={
+                          buckled
+                            ? {
+                                zIndex: idx + 1,
+                                boxShadow:
+                                  "0 12px 36px rgba(0,0,0,0.5), 0 0 0 1px rgba(219,39,119,0.12)",
+                              }
+                            : { boxShadow: "0 8px 20px rgba(0,0,0,0.4)" }
+                        }
+                      >
+                        <p className="text-sm leading-6 text-[#D8D4CE] sm:text-[15px]">{role}</p>
+                      </motion.div>
+                    );
+                  })}
                 </div>
-                {buckled ? (
-                  <svg
-                    viewBox="0 0 100 6"
-                    preserveAspectRatio="none"
-                    className="absolute inset-x-0 top-0 h-1.5 w-full"
-                    aria-hidden="true"
-                  >
-                    <polyline
-                      points="0,3 14,1 26,5 38,2 52,5 64,1 78,4 90,2 100,4"
-                      fill="none"
-                      stroke="#DB2777"
-                      strokeWidth="0.6"
-                    />
-                  </svg>
-                ) : null}
-              </motion.div>
+
+                <motion.div
+                  className={`relative w-full overflow-hidden rounded-lg border bg-[#DB2777]/[0.06] ${
+                    buckled ? "mt-2 shrink-0 border-[#DB2777]/50 sm:mt-3" : "mt-1.5 border-[#DB2777]/30"
+                  }`}
+                  style={{ transformOrigin: "center" }}
+                  animate={
+                    buckled
+                      ? reduce
+                        ? { scaleX: 0.94, scaleY: 0.72, rotate: -1, y: 0, opacity: 0.82 }
+                        : { scaleX: 0.92, scaleY: 0.68, rotate: [-0.5, 1.5, -1], y: 0, opacity: 0.85 }
+                      : { scaleY: 1 - (loaded / roles.length) * 0.4, scaleX: 1, rotate: 0, y: 0, opacity: 1 }
+                  }
+                  transition={
+                    buckled && !reduce
+                      ? { rotate: { duration: 0.5, ease: "easeOut" }, default: { duration: 0.55, ease: [0.16, 1, 0.3, 1] } }
+                      : { ease: "easeOut", duration: 0.4 }
+                  }
+                >
+                  <div className="flex min-h-[52px] items-center justify-between px-4 py-3.5 sm:min-h-[56px] sm:py-4">
+                    <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-[#DB2777]">
+                      the founder
+                    </span>
+                    <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#DB2777]/70">
+                      {buckled ? "collapsed" : "bearing the load"}
+                    </span>
+                  </div>
+                  {buckled ? (
+                    <>
+                      <svg
+                        viewBox="0 0 100 6"
+                        preserveAspectRatio="none"
+                        className="absolute inset-x-0 top-0 h-2 w-full"
+                        aria-hidden="true"
+                      >
+                        <polyline
+                          points="0,3 8,1 18,5 28,0 38,6 48,1 58,5 68,0 78,4 88,6 100,2"
+                          fill="none"
+                          stroke="#DB2777"
+                          strokeWidth="0.8"
+                        />
+                      </svg>
+                      <div
+                        className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,transparent_46%,rgba(219,39,119,0.15)_46.5%,rgba(219,39,119,0.15)_47.5%,transparent_48%)]"
+                        aria-hidden="true"
+                      />
+                    </>
+                  ) : null}
+                </motion.div>
+              </div>
             </motion.div>
 
             <div className="mt-7 min-h-[3.5rem] text-center">
@@ -2754,7 +3475,7 @@ export function InitiationContinuityReframeSection({ content }) {
                     Scale it
                     <span aria-hidden="true">↑</span>
                   </button>
-                </div>
+          </div>
               ) : null}
             </div>
           </div>
@@ -2812,6 +3533,14 @@ export function InitiationContinuityReframeSection({ content }) {
           </AnimatePresence>
         </div>
       </RevealSection>
+      {inlineCta ? (
+        <InlineCtaAnchor
+          href={inlineCta.href}
+          label={inlineCta.label}
+          tone="dark"
+          embedded
+        />
+      ) : null}
     </section>
   );
 }
@@ -2872,10 +3601,18 @@ export function InitiationAICategorySection({ content }) {
     <section
       ref={sectionRef}
       aria-labelledby="initiation-ai-category-heading"
-      className="relative z-10 scroll-mt-24 overflow-hidden bg-[#0B0B12] py-24 sm:py-28 lg:py-32"
+      className="relative z-10 scroll-mt-24 overflow-hidden bg-transparent py-24 sm:py-28 lg:py-32"
     >
-      <SectionBleed />
+      <SectionBleed top={false} />
       <SectionGlitchOverlay accent={accent} />
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 z-[2] h-40 sm:h-48"
+        style={{
+          background:
+            "linear-gradient(to bottom, rgba(3,3,4,0.92) 0%, rgba(3,3,4,0.45) 45%, transparent 100%)",
+        }}
+        aria-hidden="true"
+      />
       <div
         className="pointer-events-none absolute inset-0 transition-[background] duration-700"
         style={{
@@ -2893,7 +3630,7 @@ export function InitiationAICategorySection({ content }) {
               className="font-mono text-xs uppercase tracking-[0.3em] transition-colors duration-500"
               style={{ color: killed ? "rgba(219,39,119,0.8)" : "rgba(212,168,83,0.8)" }}
             >
-              05 / category break
+              05 / why ai isn't enough
             </p>
             <span
               className="h-px flex-1 transition-[background] duration-500"
@@ -3044,12 +3781,12 @@ export function InitiationAICategorySection({ content }) {
                     <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-[#DB2777]/70">
                       the line in the sand
                     </p>
-                    <RevealLine
-                      as="p"
+          <RevealLine
+            as="p"
                       className="mt-3 font-serif text-4xl font-semibold leading-[0.98] tracking-[-0.04em] text-[#DB2777] sm:text-6xl"
-                    >
-                      {content.requiredLine}
-                    </RevealLine>
+          >
+            {content.requiredLine}
+          </RevealLine>
                   </div>
                 </motion.div>
               )}
@@ -3061,114 +3798,40 @@ export function InitiationAICategorySection({ content }) {
   );
 }
 
-// Premium black smoke around the eyes. Not a puff sprite — it's built from real
-// fractal-noise turbulence: a fine layer that CHURNS (animated baseFrequency)
-// masked into a ring so the eyes peer through, a coarse slow plume layer that
-// drifts, and two large heavily-blurred dark masses for depth. Reduced-motion:
-// static, no churn/drift.
-function EyesSmoke({ reduce }) {
-  const uid = useId().replace(/:/g, "");
+// Warm bloom behind the rising dashboard — decorative only; reduced-motion: static glow.
+function SunriseBloom({ reduce, style }) {
   return (
-    <div className="absolute inset-0" aria-hidden="true">
+    <motion.div
+      className="pointer-events-none absolute left-1/2 top-[46%] -translate-x-1/2 -translate-y-1/2"
+      style={style}
+      aria-hidden="true"
+    >
+      <div
+        className="h-[min(92vw,720px)] w-[min(92vw,720px)] rounded-full blur-[80px] sm:blur-[100px]"
+        style={{
+          background:
+            "radial-gradient(circle, rgba(212,168,83,0.42) 0%, rgba(244,228,196,0.18) 34%, transparent 72%)",
+        }}
+      />
       {!reduce ? (
-        <>
-          <motion.div
-            className="absolute -inset-[25%] blur-[90px]"
-            style={{ background: "radial-gradient(38% 46% at 32% 62%, rgba(0,0,0,0.92), transparent 70%)" }}
-            animate={{ x: [0, 38, -18, 0], y: [0, -26, 18, 0], scale: [1, 1.12, 1] }}
-            transition={{ duration: 36, repeat: Infinity, ease: "easeInOut" }}
-          />
-          <motion.div
-            className="absolute -inset-[25%] blur-[100px]"
-            style={{ background: "radial-gradient(42% 50% at 70% 56%, rgba(0,0,0,0.94), transparent 72%)" }}
-            animate={{ x: [0, -46, 26, 0], y: [0, 22, -14, 0], scale: [1.06, 1, 1.1, 1.06] }}
-            transition={{ duration: 44, repeat: Infinity, ease: "easeInOut" }}
-          />
-        </>
-      ) : (
-        <div
-          className="absolute -inset-[25%] blur-[90px]"
-          style={{ background: "radial-gradient(40% 48% at 50% 60%, rgba(0,0,0,0.9), transparent 72%)" }}
+        <motion.div
+          className="absolute inset-0 rounded-full blur-[60px]"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(255,248,235,0.28) 0%, rgba(212,168,83,0.12) 40%, transparent 70%)",
+          }}
+          animate={{ opacity: [0.45, 0.85, 0.5], scale: [0.96, 1.06, 0.98] }}
+          transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut" }}
         />
-      )}
-
-      <svg
-        className="absolute inset-0 h-full w-full"
-        style={{
-          WebkitMaskImage: "radial-gradient(56% 46% at 50% 40%, transparent 24%, black 68%)",
-          maskImage: "radial-gradient(56% 46% at 50% 40%, transparent 24%, black 68%)",
-        }}
-      >
-        <filter id={`smk-${uid}`} colorInterpolationFilters="sRGB">
-          <feTurbulence
-            type="fractalNoise"
-            baseFrequency="0.013 0.021"
-            numOctaves="3"
-            seed="7"
-            stitchTiles="stitch"
-            result="n"
-          >
-            {!reduce ? (
-              <animate
-                attributeName="baseFrequency"
-                dur="26s"
-                values="0.013 0.021;0.018 0.027;0.013 0.021"
-                repeatCount="indefinite"
-              />
-            ) : null}
-          </feTurbulence>
-          <feColorMatrix
-            in="n"
-            type="matrix"
-            values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0.34 0.34 0.34 0 0"
-            result="blk"
-          />
-          <feComponentTransfer in="blk">
-            <feFuncA type="gamma" amplitude="1" exponent="1.7" offset="0" />
-          </feComponentTransfer>
-        </filter>
-        <rect width="100%" height="100%" filter={`url(#smk-${uid})`} />
-      </svg>
-
-      <motion.svg
-        className="absolute inset-0 h-full w-full"
-        style={{
-          mixBlendMode: "multiply",
-          WebkitMaskImage: "radial-gradient(72% 60% at 50% 46%, transparent 16%, black 82%)",
-          maskImage: "radial-gradient(72% 60% at 50% 46%, transparent 16%, black 82%)",
-        }}
-        animate={reduce ? {} : { scale: [1, 1.07, 1], x: [0, 14, 0], y: [0, -10, 0] }}
-        transition={{ duration: 30, repeat: Infinity, ease: "easeInOut" }}
-      >
-        <filter id={`smk2-${uid}`} colorInterpolationFilters="sRGB">
-          <feTurbulence
-            type="fractalNoise"
-            baseFrequency="0.006 0.01"
-            numOctaves="2"
-            seed="3"
-            stitchTiles="stitch"
-            result="n2"
-          />
-          <feColorMatrix
-            in="n2"
-            type="matrix"
-            values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0.4 0.4 0.4 0 0"
-            result="blk2"
-          />
-          <feComponentTransfer in="blk2">
-            <feFuncA type="gamma" amplitude="1" exponent="1.3" offset="0" />
-          </feComponentTransfer>
-        </filter>
-        <rect width="100%" height="100%" filter={`url(#smk2-${uid})`} />
-      </motion.svg>
-    </div>
+      ) : null}
+    </motion.div>
   );
 }
 
 // Hypnagogic copy: each line blurs up out of nothing, then keeps a slow float +
 // opacity shimmer on its OWN out-of-sync clock so the block breathes like a
-// half-remembered thought rather than sitting as a static frame. Headline gets a
-// soft amber glow-pulse. Reduced-motion: plain static text.
+// half-remembered thought rather than sitting as a static frame. Optional glow
+// keeps a very subtle lift — no heavy text-shadow bloom. Reduced-motion: static.
 function DreamLine({ as = "p", id, className, children, index = 0, reduce, glow = false }) {
   if (reduce) {
     const Plain = as;
@@ -3183,26 +3846,19 @@ function DreamLine({ as = "p", id, className, children, index = 0, reduce, glow 
   const phase = (index % 4) * 0.8;
   const floatAnim = glow
     ? {
-        y: [0, -4, 0, 3, 0],
-        scale: [1, 1.012, 1],
-        opacity: [1, 0.92, 1],
-        textShadow: [
-          "0 0 24px rgba(212,168,83,0)",
-          "0 0 30px rgba(212,168,83,0.22)",
-          "0 0 24px rgba(212,168,83,0)",
-        ],
+        y: [0, -3, 0, 2, 0],
+        opacity: [1, 0.96, 1],
       }
     : {
-        y: [0, -5, 0, 4, 0],
-        opacity: [1, 0.8, 1],
-        filter: ["blur(0px)", "blur(0.6px)", "blur(0px)"],
+        y: [0, -4, 0, 3, 0],
+        opacity: [1, 0.98, 1],
       };
   return (
     <motion.div
-      initial={{ opacity: 0, y: 24, filter: "blur(12px)" }}
+      initial={{ opacity: 0, y: 24, filter: "blur(5px)" }}
       whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
       viewport={{ once: true, margin: "-12% 0px" }}
-      transition={{ duration: 1.7, delay: 0.18 * index, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: 1.3, delay: 0.16 * index, ease: [0.16, 1, 0.3, 1] }}
     >
       <M
         id={id}
@@ -3216,47 +3872,43 @@ function DreamLine({ as = "p", id, className, children, index = 0, reduce, glow 
   );
 }
 
+const STUDIOFLOWS_REVEAL_DASHBOARD_SRC = "/product/hero-flow/01-action-center.png";
+const STUDIOFLOWS_REVEAL_DASHBOARD_SIZES =
+  "(min-width: 1536px) 2400px, (min-width: 1024px) 1920px, (min-width: 640px) 1200px, 100vw";
+
 export function InitiationStudioFlowsRevealSection({ content }) {
   const reduce = useReducedMotion();
   const sectionRef = useRef(null);
   const stageRef = useRef(null);
-  // offset start/start → end/end maps progress 0→1 to EXACTLY the window the
-  // sticky stage is pinned to the screen, so the whole fade + parallax happens
-  // in place (not before it pins or after it has scrolled away).
   const { scrollYProgress } = useScroll({
     target: stageRef,
     offset: ["start start", "end end"],
   });
-  // Whole-section progress drives the dark→light pivot: near-black at the top,
-  // warm parchment by the time the closing statement is read. This section is
-  // the visual hinge from pain → solution.
-  const { scrollYProgress: sectionProgress } = useScroll({
-    target: sectionRef,
-    offset: ["start start", "end end"],
-  });
 
-  // Scroll in → eyes rise out of black; hold; scroll out → dissolve back to black
-  // (fully gone by ~0.85 so there's a clean black beat before the copy enters).
-  const eyesOpacity = useTransform(scrollYProgress, [0, 0.16, 0.64, 0.9], [0, 1, 1, 0]);
-  const smokeOpacity = useTransform(scrollYProgress, [0, 0.2, 0.6, 0.9], [0, 1, 1, 0]);
-  const glowOpacity = useTransform(scrollYProgress, [0, 0.45, 0.82], [0, 1, 0]);
-  // Parallax — the gaze drifts (Ken Burns) while the smoke drifts the other way.
-  const eyesY = useTransform(scrollYProgress, [0, 1], ["-7%", "9%"]);
-  const eyesScale = useTransform(scrollYProgress, [0, 1], [1.18, 1.0]);
-  const smokeY = useTransform(scrollYProgress, [0, 1], ["12%", "-14%"]);
+  // Sunrise dashboard: black → product rises (scale + amber bloom) → light radiates → white wipe.
+  // 0→0.52 rise · 0.52→0.68 hold · 0.68→0.82 radiate · 0.78→1 wipe. Copy stays below stage.
+  const dashboardOpacity = useTransform(scrollYProgress, [0, 0.24, 0.52, 0.78], [0, 0.7, 1, 0.25]);
+  const dashboardScale = useTransform(scrollYProgress, [0, 0.52, 0.68], [0.28, 1, 1.03]);
+  const dashboardY = useTransform(scrollYProgress, [0, 0.52], ["44%", "0%"]);
+  const horizonGlow = useTransform(scrollYProgress, [0.06, 0.42, 0.72], [0, 1, 0.35]);
+  const bloomScale = useTransform(scrollYProgress, [0.3, 0.56, 0.82], [0.55, 1.25, 2.35]);
+  const bloomOpacity = useTransform(scrollYProgress, [0.28, 0.5, 0.68, 0.84], [0, 0.5, 0.92, 0]);
+  const rimGlow = useTransform(scrollYProgress, [0.38, 0.56, 0.72], [0, 1, 0.55]);
+  const whiteWipe = useTransform(scrollYProgress, [0.78, 1], [0, 1]);
+  const lightProgress = useTransform(scrollYProgress, [0.78, 1], [0, 1]);
+  const darkVeil = useTransform(scrollYProgress, [0, 0.52, 0.78], [1, 0.45, 0]);
 
-  // Pivot transforms — parchment rises, dark scrims recede, and the gaze is
-  // lifted toward luminance so it reads as light (not black smoke) by the bottom.
-  const lightProgress = useTransform(sectionProgress, [0.12, 0.9], [0, 1]);
-  const darkVeil = useTransform(sectionProgress, [0.12, 0.82], [1, 0]);
-  const eyesLight = useTransform(sectionProgress, [0.2, 0.8], [0, 0.72]);
-  const smokeLit = useTransform([smokeOpacity, lightProgress], ([s, l]) => s * (1 - l));
-
-  // Reduced motion: a single static "mid-pivot, fully readable" frame.
   const parchmentStyle = { opacity: reduce ? 0.85 : lightProgress };
-  const darkVeilStyle = { opacity: reduce ? 0.15 : darkVeil };
-  const eyesLightStyle = { opacity: reduce ? 0.5 : eyesLight };
-  const smokeOpacityResolved = reduce ? 0.25 : smokeLit;
+  const darkVeilStyle = { opacity: reduce ? 0.2 : darkVeil };
+  const whiteWipeStyle = { opacity: reduce ? 0 : whiteWipe };
+  const dashboardMotion = reduce
+    ? { opacity: 1, y: 0, scale: 1 }
+    : { opacity: dashboardOpacity, y: dashboardY, scale: dashboardScale };
+  const bloomMotion = reduce
+    ? { opacity: 0.55, scale: 1.15 }
+    : { opacity: bloomOpacity, scale: bloomScale };
+  const horizonStyle = { opacity: reduce ? 0.6 : horizonGlow };
+  const rimStyle = { opacity: reduce ? 0.7 : rimGlow };
 
   return (
     <section
@@ -3265,115 +3917,127 @@ export function InitiationStudioFlowsRevealSection({ content }) {
       aria-labelledby="initiation-studioflows-reveal-heading"
       className="relative z-10 scroll-mt-24 bg-black"
     >
-      {/* dark→light pivot — warm parchment rises behind everything on scroll */}
-      <motion.div
-        className="pointer-events-none absolute inset-0 z-0 bg-[#F4F1EA]"
-        style={parchmentStyle}
-        aria-hidden="true"
-      />
-      {/* THE WATCHER — a scroll-pinned stage so the gaze rises and dissolves */}
       <div ref={stageRef} className="relative z-10 h-[200vh]">
-        <div className="sticky top-0 h-screen w-full overflow-hidden">
-          {/* graded eyes, parallax drift + scroll-driven fade */}
+        <div className="sticky top-0 h-screen w-full overflow-hidden bg-black">
+          <p className="absolute inset-x-0 top-[10vh] z-20 text-center font-mono text-[10px] uppercase tracking-[0.28em] text-[#D4A853]/70 sm:top-[11vh] sm:text-xs sm:tracking-[0.3em]">
+            06 / studioflows os
+          </p>
+
+          {/* horizon — amber edge before the sun breaks */}
           <motion.div
-            className="absolute inset-0"
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-[52vh]"
             style={{
-              opacity: reduce ? 1 : eyesOpacity,
-              y: reduce ? 0 : eyesY,
-              scale: reduce ? 1 : eyesScale,
+              ...horizonStyle,
+              background:
+                "linear-gradient(to top, rgba(212,168,83,0.34) 0%, rgba(212,168,83,0.1) 28%, transparent 72%)",
             }}
             aria-hidden="true"
-          >
-            <Image
-              src="/vessa-watching.png"
-              alt=""
-              fill
-              sizes="100vw"
-              priority={false}
-              className="object-cover"
-              style={{
-                objectPosition: "50% 38%",
-                filter: "grayscale(0.95) contrast(1.14) brightness(0.68)",
-              }}
-            />
-            <div className="absolute inset-0 bg-[#D4A853]/[0.04] mix-blend-overlay" />
-            {/* luminance lift — the gaze brightens toward light as the pivot resolves */}
-            <motion.div
-              className="absolute inset-0 bg-[#F4F1EA] mix-blend-screen"
-              style={eyesLightStyle}
-              aria-hidden="true"
-            />
-          </motion.div>
+          />
 
-          {/* iris glow — the gaze breathing (fades with scroll) */}
+          <SunriseBloom reduce={reduce} style={bloomMotion} />
+
+          {/* operations dashboard — rises from the bottom like a sun */}
           <motion.div
-            className="pointer-events-none absolute inset-0 flex items-start justify-center"
-            style={{ opacity: reduce ? 0.5 : glowOpacity }}
-            aria-hidden="true"
+            className="absolute inset-x-0 bottom-0 flex items-end justify-center px-4 pb-[8vh] pt-[10vh] sm:px-8 sm:pb-[9vh]"
+            style={{
+              ...dashboardMotion,
+              transformOrigin: "50% 100%",
+            }}
           >
-            <motion.div
-              className="mt-[24vh] h-44 w-[62%] rounded-full blur-[90px]"
-              style={{ background: "radial-gradient(circle, rgba(212,168,83,0.14), transparent 70%)" }}
-              animate={reduce ? {} : { opacity: [0.3, 0.62, 0.3] }}
-              transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-            />
+            <div className="relative w-full max-w-[min(100%,560px)] sm:max-w-2xl lg:max-w-5xl">
+              <motion.div
+                className="pointer-events-none absolute -inset-4 rounded-[1.35rem] blur-2xl sm:-inset-6"
+                style={{
+                  ...rimStyle,
+                  background:
+                    "radial-gradient(ellipse at 50% 88%, rgba(212,168,83,0.55), rgba(212,168,83,0.12) 42%, transparent 72%)",
+                }}
+                aria-hidden="true"
+              />
+              <div className="relative aspect-video overflow-hidden rounded-xl border border-[#D4A853]/25 shadow-[0_32px_100px_rgba(0,0,0,0.65),0_0_0_1px_rgba(212,168,83,0.12)] sm:rounded-2xl">
+                <Image
+                  src={STUDIOFLOWS_REVEAL_DASHBOARD_SRC}
+                  alt="StudioFlows OS operations dashboard"
+                  fill
+                  unoptimized
+                  quality={100}
+                  sizes={STUDIOFLOWS_REVEAL_DASHBOARD_SIZES}
+                  priority={false}
+                  className="object-cover object-left-top"
+                />
+                <div
+                  className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#D4A853]/[0.07] via-transparent to-transparent"
+                  aria-hidden="true"
+                />
+                <div
+                  className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-[#D4A853]/20"
+                  aria-hidden="true"
+                />
+              </div>
+            </div>
           </motion.div>
 
-          {/* the smoke — drifts opposite the gaze, fades as light rises */}
-          <motion.div
-            className="pointer-events-none absolute inset-0"
-            style={{ opacity: smokeOpacityResolved, y: reduce ? 0 : smokeY }}
-            aria-hidden="true"
-          >
-            <EyesSmoke reduce={reduce} />
-          </motion.div>
-
-          {/* black scrims — recede as the section pivots to light */}
+          {/* vignette — recedes as light blooms outward */}
           <motion.div
             className="pointer-events-none absolute inset-0"
             style={{
               background:
-                "radial-gradient(62% 58% at 50% 40%, transparent 26%, rgba(0,0,0,0.7) 60%, #000 100%)",
+                "radial-gradient(68% 62% at 50% 58%, transparent 18%, rgba(0,0,0,0.62) 58%, #000 100%)",
               ...darkVeilStyle,
             }}
             aria-hidden="true"
           />
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black to-transparent" aria-hidden="true" />
+          <div
+            className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black to-transparent"
+            aria-hidden="true"
+          />
           <motion.div
-            className="pointer-events-none absolute inset-x-0 bottom-0 h-44 bg-gradient-to-b from-transparent to-black"
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent via-black/70 to-black sm:h-28"
             style={darkVeilStyle}
             aria-hidden="true"
           />
 
-          <p className="absolute inset-x-0 bottom-[12vh] text-center font-mono text-xs uppercase tracking-[0.3em] text-[#D4A853]/70">
-            06 / the system appears
-          </p>
+          {/* sunrise light pivot — confined to the parallax stage, not the copy block */}
+          <motion.div
+            className="pointer-events-none absolute inset-0 bg-[#F4F1EA]"
+            style={parchmentStyle}
+            aria-hidden="true"
+          />
+          <motion.div
+            className="pointer-events-none absolute inset-0 bg-[#F7F4ED]"
+            style={whiteWipeStyle}
+            aria-hidden="true"
+          />
         </div>
       </div>
 
-      {/* the statement — surfaces like a half-dream once the gaze dissolves */}
-      <div className="relative z-10 mx-auto max-w-3xl px-5 pb-24 pt-4 text-center sm:px-8 lg:pb-32">
-        <DreamLine
-          as="h2"
-          id="initiation-studioflows-reveal-heading"
-          index={0}
-          reduce={reduce}
-          glow
-          className="font-serif text-[1.75rem] font-semibold leading-[1.08] tracking-[-0.035em] text-[#0B0B0C] sm:text-4xl lg:text-5xl"
-        >
-          {content.headline}
-        </DreamLine>
-        <div className="mt-8 space-y-5">
-          {content.body.map((text, i) => (
-            <DreamLine
-              key={text}
-              index={i + 1}
-              reduce={reduce}
-              className="mx-auto max-w-2xl text-[15px] leading-7 text-[#3F3D39] sm:text-[17px] sm:leading-8"
-            >
-              {text}
-            </DreamLine>
-          ))}
+      <div className="relative z-10 -mt-[clamp(5rem,12vh,9rem)] bg-black pb-24 pt-2 text-center sm:pt-4 lg:pb-32">
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black via-black/95 to-transparent"
+          aria-hidden="true"
+        />
+        <div className="relative mx-auto max-w-3xl px-5 sm:px-8">
+          <DreamLine
+            as="h2"
+            id="initiation-studioflows-reveal-heading"
+            index={0}
+            reduce={reduce}
+            className="font-serif text-[1.75rem] font-semibold leading-[1.08] tracking-[-0.035em] text-white sm:text-4xl lg:text-5xl"
+          >
+            {content.headline}
+          </DreamLine>
+          <div className="mt-8 space-y-5">
+            {content.body.map((text, i) => (
+              <DreamLine
+                key={text}
+                index={i + 1}
+                reduce={reduce}
+                className="mx-auto max-w-2xl text-[15px] leading-7 text-white/[0.88] sm:text-[17px] sm:leading-8"
+              >
+                {text}
+              </DreamLine>
+            ))}
+          </div>
         </div>
       </div>
     </section>
@@ -3386,7 +4050,24 @@ export function InitiationStudioFlowsRevealSection({ content }) {
 // rewind — rewinding fixes nothing). Hit "Run it with StudioFlows" and the same
 // timeline replays, but the system flags the drift EARLY and the emergency never
 // lands. Reduced-motion: static end-state, manual mode toggle, no loop.
-const FRIDAY_MARKERS = [0.1, 0.22, 0.34, 0.46, 0.58, 0.7];
+// Tape timeline: equal time per beat, short hold on climax ("Again." / system resolve).
+const FRIDAY_PANIC_HOLD = 0.06;
+
+function fridayBeatSpan() {
+  return 1 - FRIDAY_PANIC_HOLD;
+}
+
+function fridayBeatMarkers(beatCount) {
+  const span = fridayBeatSpan();
+  return Array.from({ length: beatCount }, (_, i) => ((i + 1) / beatCount) * span);
+}
+
+function fridayBeatIndex(progress, beatCount) {
+  const span = fridayBeatSpan();
+  if (progress >= span) return beatCount - 1;
+  const segment = span / beatCount;
+  return Math.min(Math.floor(progress / segment), beatCount - 1);
+}
 
 function fridayTimecode(p) {
   const total = 23 * 60 + 6 + Math.round(p * 252); // THU 23:06 → ~03:18
@@ -3470,13 +4151,16 @@ export function InitiationFridayReportSection({ content }) {
 
   const isSystem = mode === "system";
   const accent = isSystem ? "#D4A853" : "#DB2777";
-  const seen = FRIDAY_MARKERS.filter((m) => progress > m).length;
-  const systemDone = isSystem && progress >= 0.98;
-  const panic = !isSystem && progress >= 0.92;
+  const beatSpan = fridayBeatSpan();
+  const beatCount = isSystem ? content.systemBeats.length : content.unaidedBeats.length;
+  const markers = fridayBeatMarkers(beatCount);
+  const beatIndex = fridayBeatIndex(progress, beatCount);
+  const systemDone = isSystem && progress >= beatSpan;
+  const panic = !isSystem && progress >= beatSpan;
 
   // narration streams one short beat at a time as the tape advances
-  const unaidedBeat = content.unaidedBeats[Math.min(seen, content.unaidedBeats.length - 1)];
-  const systemBeat = content.systemBeats[Math.min(seen, content.systemBeats.length - 1)];
+  const unaidedBeat = content.unaidedBeats[beatIndex];
+  const systemBeat = content.systemBeats[beatIndex];
 
   return (
     <section
@@ -3491,7 +4175,7 @@ export function InitiationFridayReportSection({ content }) {
         <div className="relative mx-auto max-w-5xl px-5 sm:px-8">
           <div className="flex items-center gap-3">
             <p className="font-mono text-xs uppercase tracking-[0.3em] text-[#D4A853]/80">
-              07 / before the scramble
+              07 / before the emergency
             </p>
             <span className="h-px flex-1 bg-gradient-to-r from-[#D4A853]/30 to-transparent" />
           </div>
@@ -3586,7 +4270,7 @@ export function InitiationFridayReportSection({ content }) {
                     <div className="mt-5 min-h-[3.5rem]">
                       <AnimatePresence mode="wait">
                         <motion.p
-                          key={seen}
+                          key={beatIndex}
                           initial={reduce ? false : { opacity: 0, y: 10, filter: "blur(4px)" }}
                           animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
                           exit={reduce ? { opacity: 0 } : { opacity: 0, y: -8 }}
@@ -3643,15 +4327,21 @@ export function InitiationFridayReportSection({ content }) {
                   className="absolute left-0 top-1/2 h-1 -translate-y-1/2 rounded-full"
                   style={{ width: `${progress * 100}%`, backgroundColor: accent }}
                 />
-                {/* markers */}
-                {(isSystem ? FRIDAY_MARKERS : [0.74, 0.83, 0.91]).map((m, i) => {
-                  const lit = isSystem && progress > m;
-                  const col = isSystem ? (lit ? "#D4A853" : "rgba(212,168,83,0.4)") : "#DB2777";
+                {/* beat markers — one dot per phrase transition (6 beats → 6 dots) */}
+                {markers.map((m, i) => {
+                  const lit = progress >= m;
+                  const col = isSystem
+                    ? lit
+                      ? "#D4A853"
+                      : "rgba(212,168,83,0.4)"
+                    : lit
+                      ? "#DB2777"
+                      : "rgba(219,39,119,0.45)";
                   return (
                     <span
                       key={i}
-                      className="absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full"
-                      style={{ left: `${m * 100}%`, backgroundColor: col, opacity: isSystem ? 1 : 0.85 }}
+                      className="absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full transition-colors duration-200"
+                      style={{ left: `${m * 100}%`, backgroundColor: col }}
                     />
                   );
                 })}
@@ -3667,7 +4357,7 @@ export function InitiationFridayReportSection({ content }) {
               {isSystem ? (
                 <div className="mt-4 flex flex-wrap justify-center gap-2">
                   {content.revealItems.map((item, i) => {
-                    const lit = progress > (FRIDAY_MARKERS[i] ?? 0.7);
+                    const lit = progress >= (markers[i] ?? beatSpan);
                     return (
                       <span
                         key={item}
@@ -4173,8 +4863,8 @@ export function InitiationWhatYouGetSection({ content }) {
                 transition={{ duration: reduce ? 0 : 0.6, delay: reduce ? 0 : i * 0.08, ease: [0.16, 1, 0.3, 1] }}
                 className="overflow-hidden rounded-2xl border border-white/10 bg-[#06060a] shadow-[0_30px_90px_rgba(0,0,0,0.55)]"
               >
-                <button
-                  type="button"
+          <button
+            type="button"
                   onClick={() => openLightbox(content.proof, i)}
                   aria-label={`Enlarge ${shot.label} screenshot`}
                   className="group/zoom block w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4A853]/70"
@@ -4200,7 +4890,7 @@ export function InitiationWhatYouGetSection({ content }) {
                       <MagnifyGlyph />
                     </span>
                   </div>
-                </button>
+          </button>
                 <figcaption className="px-4 py-3 text-[13px] leading-6 text-[#9B9894]">
                   {shot.caption}
                 </figcaption>
@@ -4412,8 +5102,8 @@ export function InitiationFoundingProgramSection({ content }) {
                     />
                     <span className="text-[15px] leading-7 text-[#D8D5D0]">{item}</span>
                   </motion.li>
-                ))}
-              </ul>
+            ))}
+          </ul>
               <div className="mt-7 space-y-3 border-t border-white/[0.07] pt-6">
                 {content.supporting.map((line, i) => (
                   <p
@@ -4550,12 +5240,12 @@ export function InitiationServiceLoopsSection({ content }) {
           </ul>
 
           <div className="mt-12 border-l-2 border-[#D4A853]/50 pl-6">
-            <RevealLine
-              as="p"
+          <RevealLine
+            as="p"
               className="max-w-2xl font-serif text-2xl font-semibold leading-snug tracking-[-0.025em] text-[#F3EFEC] sm:text-3xl"
-            >
+          >
               {content.qualifier}
-            </RevealLine>
+          </RevealLine>
           </div>
         </div>
       </RevealSection>
@@ -4570,13 +5260,16 @@ export function InlineCtaAnchor({
   href,
   label = "See if StudioFlows is a fit",
   tone = "dark",
-  bg = "#030304",
+  embedded = false,
 }) {
   const dark = tone !== "light";
   return (
     <div
-      className="relative z-10 flex justify-center px-5 pb-12 sm:pb-16"
-      style={{ backgroundColor: bg }}
+      className={
+        embedded
+          ? "relative z-20 mt-8 flex justify-center px-5 pb-1 pt-2 sm:mt-10 sm:pb-2"
+          : "relative z-20 -my-10 flex justify-center bg-transparent px-5 py-6 sm:-my-12 sm:py-8"
+      }
     >
       <Link
         href={href}
@@ -4641,7 +5334,7 @@ export function InitiationCompoundingIntelligenceSection({ content }) {
             <div>
               <div className="flex items-center gap-3">
                 <p className="font-mono text-xs uppercase tracking-[0.3em] text-[#D4A853]/80">
-                  08 / compounding memory
+                  08 / how it learns
                 </p>
                 <span className="h-px flex-1 bg-gradient-to-r from-[#D4A853]/30 to-transparent" />
               </div>
@@ -4687,7 +5380,7 @@ export function InitiationCompoundingIntelligenceSection({ content }) {
                     </li>
                   );
                 })}
-              </ul>
+          </ul>
 
               <p className="mt-8 max-w-xl font-serif text-xl font-semibold leading-snug tracking-[-0.02em] text-[#F3EFEC] sm:text-2xl">
                 {content.body[7]}
@@ -4901,7 +5594,7 @@ export function InitiationConfidenceModelSection({ content }) {
             <div>
               <div className="flex items-center gap-3">
                 <p className="font-mono text-xs uppercase tracking-[0.3em] text-[#D4A853]/80">
-                  09 / trust architecture
+                  09 / earned trust
                 </p>
                 <span className="h-px flex-1 bg-gradient-to-r from-[#D4A853]/30 to-transparent" />
               </div>
@@ -4910,7 +5603,7 @@ export function InitiationConfidenceModelSection({ content }) {
                 id="initiation-confidence-heading"
                 className="mt-6 font-serif text-3xl font-semibold leading-[1.04] tracking-[-0.035em] text-[#F3EFEC] sm:text-4xl lg:text-5xl"
               >
-                {content.headline}
+            {content.headline}
               </h2>
 
               <div className="mt-7 max-w-xl space-y-4">
@@ -5095,7 +5788,7 @@ export function InitiationFivePillarsSection({ content }) {
       <RevealSection>
         <div className="relative mx-auto max-w-7xl px-5 sm:px-8">
           <div className="flex items-center gap-3">
-            <p className="font-mono text-xs uppercase tracking-[0.3em] text-[#D4A853]/80">10 / doctrine</p>
+            <p className="font-mono text-xs uppercase tracking-[0.3em] text-[#D4A853]/80">10 / five pillars</p>
             <span className="h-px flex-1 bg-gradient-to-r from-[#D4A853]/30 to-transparent" />
           </div>
 
@@ -5375,7 +6068,7 @@ export function InitiationOperationalDiagnosticSection({ content }) {
       />
       <RevealSection>
         <div className="relative mx-auto max-w-3xl px-5 text-center sm:px-8">
-          <p className="font-mono text-xs uppercase tracking-[0.3em] text-[#8A6A1F]">11 / the path opens</p>
+          <p className="font-mono text-xs uppercase tracking-[0.3em] text-[#8A6A1F]">11 / fit check</p>
           <h2
             id="initiation-diagnostic-heading"
             className="mt-6 font-serif text-3xl font-semibold leading-[1.04] tracking-[-0.035em] text-[#0B0B0C] sm:text-4xl lg:text-5xl"
@@ -5446,11 +6139,11 @@ export function InitiationOperationalDiagnosticSection({ content }) {
               href={content.ctaTarget}
               className="group relative inline-flex min-h-[52px] items-center justify-center gap-2 rounded-full bg-[#0B0B0C] px-8 py-3.5 text-sm font-semibold tracking-wide text-[#F4F1EA] shadow-[0_18px_50px_rgba(0,0,0,0.25)] transition hover:bg-black"
             >
-              {content.cta}
+            {content.cta}
               <span className="transition-transform duration-300 group-hover:translate-x-1" aria-hidden="true">
                 →
               </span>
-            </Link>
+          </Link>
           </div>
         </div>
       </RevealSection>
@@ -5667,8 +6360,8 @@ export function InitiationFinalCtaSection({ content }) {
               id="initiation-final-cta-heading"
               className="mt-6 font-serif text-3xl font-semibold leading-[1.04] tracking-[-0.035em] text-[#0B0B0C] sm:text-4xl lg:text-5xl"
             >
-              {content.headline}
-            </h2>
+            {content.headline}
+          </h2>
             <div className="mt-6 space-y-4">
               {content.body.map((t) => (
                 <p key={t} className="max-w-2xl text-base leading-8 text-[#3A352C] sm:text-[17px]">
@@ -5690,19 +6383,19 @@ export function InitiationFinalCtaSection({ content }) {
                   href={content.primaryCtaTarget}
                   className="group relative inline-flex min-h-[54px] items-center justify-center gap-2 rounded-full bg-[#0B0B0C] px-9 py-4 text-sm font-semibold tracking-wide text-[#F4F1EA] shadow-[0_18px_50px_rgba(0,0,0,0.25)] transition hover:bg-black"
                 >
-                  {content.primaryCta}
+              {content.primaryCta}
                   <span className="transition-transform duration-300 group-hover:translate-x-1" aria-hidden="true">
                     →
                   </span>
-                </Link>
+            </Link>
               </div>
               <Link
                 href={content.secondaryCtaTarget}
                 className="inline-flex min-h-[54px] items-center justify-center rounded-full border border-black/20 bg-transparent px-9 py-4 text-sm font-semibold text-[#0B0B0C] transition hover:bg-black/5"
               >
-                {content.secondaryCta}
-              </Link>
-            </div>
+              {content.secondaryCta}
+            </Link>
+          </div>
           </motion.div>
           <footer className="mt-12 border-t border-black/10 pt-8 text-sm text-[#6B6557]">StudioFlows</footer>
         </div>
@@ -5710,3 +6403,419 @@ export function InitiationFinalCtaSection({ content }) {
     </section>
   );
 }
+
+// ── PAIN ⇄ PRODUCT BANDS · alternating editorial spreads ──────────────────────
+// Terse magazine-style bands that show a REAL product screenshot fast. Each band
+// blends a known pain (scattered tools) with the product moment that resolves it.
+// A lightweight interaction swaps the "scattered" before-state into the resolved
+// StudioFlows screenshot — hover-preview on fine pointers, tap/keyboard toggle
+// everywhere (aria-pressed). Reduced motion → resolved state, no auto-swap.
+// Exported for a later task to wire into the page; not placed in any page here.
+
+// Disconnected tools — concepts pulled from aiCategorySeparation.body
+// (CRM / calendar / inbox / spreadsheet / group chat / text).
+const PP_SCATTER_CHIPS = ["CRM", "Calendar", "Inbox", "Spreadsheet", "Group chat", "Text"];
+const PP_CHIP_ROT = [-6, 4, -3, 7, -5, 3];
+const PP_MAC_DOTS = ["#FF5F57", "#FEBC2E", "#28C840"];
+
+function PainScatterChips({ tone }) {
+  const dark = tone === "dark";
+  return (
+    <div className="flex h-full w-full flex-wrap content-center items-center justify-center gap-2.5 p-6 sm:gap-3 sm:p-8">
+      {PP_SCATTER_CHIPS.map((chip, i) => (
+        <span
+          key={chip}
+          className={`inline-flex items-center rounded-full border border-dashed px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.18em] ${
+            dark
+              ? "border-white/20 bg-white/[0.03] text-[#C9C6C2]"
+              : "border-black/15 bg-black/[0.03] text-[#5A554B]"
+          }`}
+          style={{ transform: `rotate(${PP_CHIP_ROT[i % PP_CHIP_ROT.length]}deg)` }}
+        >
+          {chip}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+// Industry image slot: real photo at /industries/{key}.jpg with a graceful
+// grain+gradient placeholder fallback if the asset is missing. Never crashes.
+function PainIndustrySlot({ industry, tone }) {
+  const [failed, setFailed] = useState(false);
+  const dark = tone === "dark";
+  return (
+    <span
+      className={`relative inline-flex h-9 w-14 shrink-0 items-center justify-center overflow-hidden rounded-md border ${
+        dark ? "border-white/15" : "border-black/10"
+      }`}
+      aria-hidden="true"
+    >
+      <span
+        className="absolute inset-0"
+        style={{
+          backgroundImage:
+            "radial-gradient(120% 120% at 0% 0%, rgba(219,39,119,0.30), transparent 60%), radial-gradient(120% 120% at 100% 100%, rgba(212,168,83,0.28), transparent 60%)",
+        }}
+      />
+      <span
+        className="absolute inset-0 opacity-40 mix-blend-overlay"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(0deg, rgba(255,255,255,0.10) 0px, rgba(255,255,255,0.10) 1px, transparent 1px, transparent 2px)",
+        }}
+      />
+      {!failed ? (
+        <Image
+          src={`/industries/${industry}.jpg`}
+          alt=""
+          fill
+          sizes="56px"
+          className="object-cover"
+          onError={() => setFailed(true)}
+        />
+      ) : null}
+    </span>
+  );
+}
+
+export function PainProductBand({ band, index }) {
+  const reduce = useReducedMotion();
+  const [revealed, setRevealed] = useState(false);
+  // Reduced motion (or no JS hydration default): show the resolved screenshot.
+  const showResolved = reduce ? true : revealed;
+  const dark = band.tone === "dark";
+  const phone = band.imageKind === "phone";
+  const imageFirst = index % 2 === 1;
+
+  const palette = dark
+    ? {
+        bg: "bg-[#0B0B12]",
+        text: "text-[#F3EFEC]",
+        muted: "text-[#9B9894]",
+        frame: "border-white/10 bg-[#06060a]",
+        chrome: "border-white/[0.06] bg-white/[0.02]",
+        chromeLabel: "text-[#9B9894]/70",
+        media: "bg-[#0b0b12]",
+        scatter: "bg-[#070710]",
+      }
+    : {
+        bg: "bg-[#F4F1EA]",
+        text: "text-[#0B0B0C]",
+        muted: "text-[#3A352C]",
+        frame: "border-black/10 bg-white",
+        chrome: "border-black/[0.06] bg-black/[0.02]",
+        chromeLabel: "text-[#6B6557]",
+        media: "bg-[#ECE8DF]",
+        scatter: "bg-[#ECE8DF]",
+      };
+
+  const toggle = useCallback(() => {
+    if (reduce) return;
+    setRevealed((v) => !v);
+  }, [reduce]);
+
+  // Hover-preview on fine pointers; tap/keyboard toggle covers touch + a11y.
+  const onEnter = useCallback(() => {
+    if (!reduce) setRevealed(true);
+  }, [reduce]);
+  const onLeave = useCallback(() => {
+    if (!reduce) setRevealed(false);
+  }, [reduce]);
+
+  const aspect = phone ? "aspect-[9/18]" : "aspect-[16/9]";
+
+  return (
+    <motion.article
+      initial={reduce ? false : { opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-10% 0px" }}
+      transition={{ duration: reduce ? 0 : 0.6, ease: [0.16, 1, 0.3, 1] }}
+      className={`relative overflow-hidden ${palette.bg} ${palette.text}`}
+    >
+      <div className="mx-auto grid max-w-6xl items-center gap-8 px-5 py-16 sm:px-8 sm:py-20 lg:grid-cols-2 lg:gap-14 lg:py-28">
+        {/* Copy column */}
+        <div className={imageFirst ? "lg:order-2" : "lg:order-1"}>
+          <div className="flex items-center gap-3">
+            <PainIndustrySlot industry={band.industry} tone={band.tone} />
+            <span className="font-mono text-[10px] uppercase tracking-[0.28em] text-[#D4A853]">
+              {band.industry.replace(/-/g, " ")}
+            </span>
+          </div>
+          <h3 className="mt-5 font-serif text-3xl font-semibold leading-[1.02] tracking-[-0.03em] sm:text-4xl lg:text-5xl">
+            {band.headline}
+          </h3>
+          <p className={`mt-4 max-w-md text-base leading-7 ${palette.muted} sm:text-[17px]`}>
+            {band.line}
+          </p>
+          <p className="mt-5 inline-flex items-center gap-2 font-serif text-lg font-semibold leading-snug tracking-[-0.01em] text-[#DB2777] sm:text-xl">
+            <span aria-hidden="true" className="text-[#D4A853]">
+              →
+            </span>
+            {band.benefit}
+          </p>
+        </div>
+
+        {/* Product column — the interaction lives here */}
+        <div className={imageFirst ? "lg:order-1" : "lg:order-2"}>
+          <button
+            type="button"
+            onClick={toggle}
+            onMouseEnter={onEnter}
+            onMouseLeave={onLeave}
+            aria-pressed={showResolved}
+            aria-label={
+              showResolved
+                ? `Showing StudioFlows: ${band.benefit}`
+                : `Show how StudioFlows resolves it: ${band.benefit}`
+            }
+            className={`group block w-full min-h-[44px] rounded-2xl border ${palette.frame} text-left shadow-[0_30px_90px_rgba(0,0,0,0.35)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#DB2777]/70 ${
+              phone ? "mx-auto max-w-[260px] p-2 sm:max-w-[300px]" : ""
+            }`}
+          >
+            {/* Chrome bar */}
+            <div className={`flex items-center gap-2 rounded-t-xl border-b ${palette.chrome} px-4 py-2.5`}>
+              {PP_MAC_DOTS.map((c) => (
+                <span key={c} className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: `${c}cc` }} />
+              ))}
+              <span className={`ml-3 truncate font-mono text-[10px] uppercase tracking-[0.2em] ${palette.chromeLabel}`}>
+                {showResolved ? "in StudioFlows" : "scattered across tools"}
+              </span>
+              <span
+                className={`ml-auto hidden shrink-0 rounded-full border px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.18em] sm:inline ${
+                  dark ? "border-white/15 text-[#9B9894]" : "border-black/10 text-[#6B6557]"
+                }`}
+                aria-hidden="true"
+              >
+                {reduce ? "resolved" : showResolved ? "tap to scatter" : "tap to resolve"}
+              </span>
+            </div>
+
+            {/* Media area: scattered chips ⇄ resolved screenshot */}
+            <div className={`relative w-full overflow-hidden rounded-b-xl ${aspect} ${palette.media}`}>
+              {reduce ? (
+                <Image
+                  src={band.image}
+                  alt={`StudioFlows OS — ${band.headline}`}
+                  fill
+                  sizes={phone ? "300px" : "(min-width: 1024px) 50vw, 100vw"}
+                  className="object-cover object-top"
+                />
+              ) : (
+                <AnimatePresence initial={false} mode="wait">
+                  {showResolved ? (
+                    <motion.div
+                      key="resolved"
+                      initial={{ opacity: 0, scale: 1.02 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                      className="absolute inset-0"
+                    >
+                      <Image
+                        src={band.image}
+                        alt={`StudioFlows OS — ${band.headline}`}
+                        fill
+                        sizes={phone ? "300px" : "(min-width: 1024px) 50vw, 100vw"}
+                        className="object-cover object-top transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+                      />
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="scattered"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className={`absolute inset-0 ${palette.scatter}`}
+                    >
+                      <PainScatterChips tone={band.tone} />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              )}
+            </div>
+          </button>
+        </div>
+      </div>
+    </motion.article>
+  );
+}
+
+export function PainProductBands({ bands }) {
+  if (!bands || bands.length === 0) return null;
+  return (
+    <>
+      {bands.map((band, index) => (
+        <PainProductBand key={band.id} band={band} index={index} />
+      ))}
+    </>
+  );
+}
+
+// ── StoryExpander ────────────────────────────────────────────────────────────
+// Accessible disclosure that keeps the long founder story collapsed by default,
+// so skimmers see one teaser line instead of ~15. Collapsed → teaser + a real
+// <button>. Expanded → framer-motion height/opacity reveal of the founderStory
+// headline + body (passed in as `content`). useReducedMotion() → instant
+// open/close with no height animation. Named export, NOT wired into any page.
+//   content = { teaser, cta, headline, body }
+export function StoryExpander({ content }) {
+  const reduce = useReducedMotion();
+  const [open, setOpen] = useState(false);
+  const regionId = useId();
+
+  if (!content) return null;
+  const { teaser, cta = "Read why we built this", headline, body = [] } = content;
+
+  const Panel = (
+    <div className="border-l-2 border-[#DB2777]/40 pl-6">
+      {headline ? (
+        <h3 className="max-w-2xl font-serif text-2xl font-semibold leading-[1.05] tracking-[-0.025em] text-[#F3EFEC] sm:text-3xl">
+          {headline}
+        </h3>
+      ) : null}
+      <div className="mt-5 space-y-3">
+        {body.map((line, index) => (
+          <p key={index} className="text-base leading-7 text-[#B8B5B0] sm:text-[17px]">
+            {line}
+          </p>
+        ))}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="text-[#F3EFEC]">
+      {teaser ? (
+        <p className="max-w-2xl text-lg leading-8 text-[#C2BFBA] sm:text-xl">{teaser}</p>
+      ) : null}
+
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-controls={regionId}
+        className="mt-5 inline-flex min-h-[44px] items-center gap-2 rounded-full border border-[#DB2777]/40 px-5 py-2 font-mono text-xs uppercase tracking-[0.22em] text-[#DB2777] transition-colors hover:bg-[#DB2777]/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#DB2777]/70"
+      >
+        <span>{cta}</span>
+        <span
+          aria-hidden="true"
+          className={`transition-transform duration-300 ${open ? "rotate-90" : ""}`}
+        >
+          →
+        </span>
+      </button>
+
+      {reduce ? (
+        open ? (
+          <div id={regionId} role="region" aria-label={headline || cta} className="mt-8">
+            {Panel}
+          </div>
+        ) : null
+      ) : (
+        <AnimatePresence initial={false}>
+          {open ? (
+            <motion.div
+              key="story"
+              id={regionId}
+              role="region"
+              aria-label={headline || cta}
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+              style={{ overflow: "hidden" }}
+            >
+              <div className="mt-8">{Panel}</div>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+      )}
+    </div>
+  );
+}
+
+// ── IndustryImage ────────────────────────────────────────────────────────────
+// Canonical swappable image slot for industry/lifestyle photography we don't
+// have yet. Points at /industries/{slot}.jpg; on a missing/failed asset it
+// gracefully falls back (onError) to a tasteful grain + gradient block with the
+// humanized slot label centered, so an empty slot reads as intentional, never
+// broken. `tone`: "dark" → desaturated noir (grayscale + dark gradient + faint
+// magenta #DB2777 rim); "light" → warm full-color framing. `kind`: "portrait"
+// (~4:5) or "wide" (~16:9). Named export, NOT wired into any page.
+const INDUSTRY_IMAGE_SIZES = "(min-width: 1024px) 50vw, 100vw";
+
+function humanizeSlot(slot) {
+  return String(slot || "")
+    .split("-")
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+export function IndustryImage({ slot, kind = "portrait", tone = "dark", className = "" }) {
+  const [failed, setFailed] = useState(false);
+  const dark = tone === "dark";
+  const label = humanizeSlot(slot);
+  const aspect = kind === "wide" ? "aspect-[16/9]" : "aspect-[4/5]";
+
+  return (
+    <div
+      className={`relative overflow-hidden rounded-2xl ${aspect} ${
+        dark ? "bg-[#07070C]" : "bg-[#F4F1EA]"
+      } ${className}`}
+    >
+      {!failed ? (
+        <Image
+          src={`/industries/${slot}.jpg`}
+          alt={label}
+          fill
+          sizes={INDUSTRY_IMAGE_SIZES}
+          onError={() => setFailed(true)}
+          className={`object-cover ${
+            dark ? "grayscale-[0.85] contrast-[1.05] brightness-[0.82]" : "saturate-[1.05]"
+          }`}
+        />
+      ) : (
+        <div
+          role="img"
+          aria-label={label}
+          className="absolute inset-0 flex items-center justify-center"
+        >
+          {/* Gradient base — noir for dark, warm for light. */}
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: dark
+                ? "radial-gradient(120% 120% at 0% 0%, rgba(219,39,119,0.18), transparent 55%), radial-gradient(120% 120% at 100% 100%, rgba(8,8,14,0.9), rgba(8,8,14,1) 70%)"
+                : "radial-gradient(120% 120% at 0% 0%, rgba(212,168,83,0.30), transparent 55%), radial-gradient(120% 120% at 100% 100%, rgba(219,39,119,0.16), transparent 60%)",
+            }}
+          />
+          {/* Grain overlay. */}
+          <div
+            className="absolute inset-0 opacity-30 mix-blend-overlay"
+            style={{
+              backgroundImage:
+                "repeating-linear-gradient(0deg, rgba(255,255,255,0.10) 0px, rgba(255,255,255,0.10) 1px, transparent 1px, transparent 2px), repeating-linear-gradient(90deg, rgba(255,255,255,0.06) 0px, rgba(255,255,255,0.06) 1px, transparent 1px, transparent 2px)",
+            }}
+          />
+          {/* Faint magenta rim (more present in dark/noir tone). */}
+          <div
+            className={`pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ${
+              dark ? "ring-[#DB2777]/30" : "ring-[#DB2777]/15"
+            }`}
+          />
+          <span
+            className={`relative z-10 px-4 text-center font-serif text-xl font-semibold tracking-[-0.02em] sm:text-2xl ${
+              dark ? "text-[#F3EFEC]" : "text-[#0B0B0C]"
+            }`}
+          >
+            {label}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+

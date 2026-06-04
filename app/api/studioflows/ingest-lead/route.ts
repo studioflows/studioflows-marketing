@@ -80,17 +80,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Lead storage not configured" }, { status: 500 });
   }
 
+  const supabaseLeadId = crypto.randomUUID();
   const qualifiedRow = buildQualifiedLeadRow(raw, { score, reasons, qualified }, tier);
+  qualifiedRow.id = supabaseLeadId;
   qualifiedRow.metadata = {
     ...qualifiedRow.metadata,
     ...attribution,
   };
 
-  const { data: inserted, error: insertError } = await supabase
-    .from("custom_ops_hub_leads")
-    .insert([qualifiedRow])
-    .select("id")
-    .single();
+  // Do not chain .select() here: anon RLS allows INSERT but has no SELECT policy,
+  // so RETURNING id fails with "new row violates row-level security policy".
+  const { error: insertError } = await supabase.from("custom_ops_hub_leads").insert([qualifiedRow]);
 
   if (insertError) {
     return NextResponse.json(
@@ -98,8 +98,6 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
-
-  const supabaseLeadId = (inserted?.id as string | undefined) ?? undefined;
 
   const { first_name, last_name } = splitName(raw.fullName);
   const email = typeof raw.workEmail === "string" ? raw.workEmail.trim().toLowerCase() : null;

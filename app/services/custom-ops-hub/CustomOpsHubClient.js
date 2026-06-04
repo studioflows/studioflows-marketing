@@ -184,21 +184,31 @@ const QUIZ_SECTIONS = [
   },
   {
     id: "budget-approval",
-    title: "Budget and who can say yes",
+    title: "Founder pricing and who can say yes",
     challenger:
-      "Align on realistic investment and approval path up front so we do not design a build you cannot green-light.",
+      "Founding members get StudioFlows at the launch rate, locked for life. Just confirm it works and who signs off so we route you to onboarding, not a sales cycle.",
     fields: [
       {
         name: "budgetRange",
-        label: "If this removed your main bottleneck in 60-90 days, which investment level is realistic for your team?",
+        sectionTitle: "Founding-member pricing",
+        challenger:
+          "$99 your first month, then $199/month — 5 seats included, additional seats $15/mo per user. Your founder rate is locked for life as an early member. New features and products are priced separately.",
+        label: "Does founding-member pricing work for your team?",
         type: "single",
         autoAdvance: true,
         required: true,
-        options: ["Under $8k", "$8k-$12k", "$12k-$18k", "$18k-$30k", "$30k+"],
+        options: [
+          "Yes — that works for us",
+          "Yes, with a couple of questions",
+          "Need to confirm with a partner first",
+          "Not the right time",
+        ],
       },
       {
         name: "approvalInvolvement",
-        label: "How would this be approved?",
+        sectionTitle: "Who can say yes",
+        challenger: "So we know who to bring the founder plan to and how fast you can start.",
+        label: "Who signs off on getting started?",
         type: "single",
         autoAdvance: true,
         required: true,
@@ -267,9 +277,9 @@ const FAQ_ITEMS = [
       "Most implementations are delivered in 2-4 weeks. Exact timing depends on scope, existing systems, and decision speed.",
   },
   {
-    question: "What does investment usually look like?",
+    question: "What does pricing look like?",
     answer:
-      "Most qualified SMB engagements fall in the $12k-$30k range depending on scope, systems involved, and rollout depth.",
+      "Founding-member pricing is $99 your first month, then $199/month — 5 seats included, with additional seats at $15/mo per user. That founder rate is locked for life as an early member. New features and products are priced separately.",
   },
   {
     question: "What happens after I submit?",
@@ -454,7 +464,7 @@ export default function CustomOpsHubClient() {
   const disqualificationSummary = useMemo(
     () => [
       `Timeline: ${answers.urgencyWindow || "Not provided"}`,
-      `Budget range: ${answers.budgetRange || "Not provided"}`,
+      `Pricing fit: ${answers.budgetRange || "Not provided"}`,
       `Approval path: ${answers.approvalInvolvement || "Not provided"}`,
     ],
     [answers]

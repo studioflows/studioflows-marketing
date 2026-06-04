@@ -16,6 +16,7 @@ export const INITIATION_HOMEPAGE_CONTENT = {
   hero: {
     eyebrow: "Built for owners who run service businesses",
     headline: "Your business knows when you disappear.",
+    subheadline: "Run your service business from one place — with StudioFlows OS.",
     supportingCopy: [
       "Jobs fall behind.",
       "Schedules get messy.",
@@ -28,6 +29,48 @@ export const INITIATION_HOMEPAGE_CONTENT = {
     primaryCtaTarget: OS_DIAGNOSTIC_URL,
     secondaryCta: "See how it works",
     secondaryCtaTarget: "#system",
+    // Hero "flashlight in the dark" reveal — the OS is hidden in shadow; the
+    // beam roams across it like a detective finding clues. Real product views.
+    spotlight: {
+      caption: "Inside the StudioFlows OS",
+      clues: [
+        {
+          src: "/product/hero-flow/01-action-center.png",
+          label: "Action Center",
+          hint: "The whole operation, one view.",
+        },
+        {
+          src: "/product/hero-flow/02-business-health-dashboard.png",
+          label: "Business health dashboard",
+          hint: "The whole operation, visible at once.",
+        },
+        {
+          src: "/product/hero-flow/03-interactive-calendar.png",
+          label: "Calendar",
+          hint: "See the whole week and what's coming.",
+        },
+        {
+          src: "/product/hero-flow/04-staffing-scheduler.png",
+          label: "Staffing schedule",
+          hint: "Pipeline health, crew load, and upcoming jobs in one operations view.",
+        },
+        {
+          src: "/product/hero-flow/05-job-details-drawer.png",
+          label: "Job details drawer",
+          hint: "Files and status live on the job.",
+        },
+        {
+          src: "/product/hero-flow/06-jobs-daily-queue.png",
+          label: "Daily queue",
+          hint: "Confirm, assign, and dispatch.",
+        },
+        {
+          src: "/product/hero-flow/07-job-workspace-lock-sequences.png",
+          label: "Job workspace",
+          hint: "One job from booking to delivery: lifecycle, crew, status, and notes.",
+        },
+      ],
+    },
   },
   founderPain: {
     headline: "Somewhere along the way, you became the backup plan for everything.",
@@ -81,6 +124,15 @@ export const INITIATION_HOMEPAGE_CONTENT = {
       "It wasn't that people didn't care.",
       "The system was not strong enough to keep good people from failing.",
     ],
+  },
+  // Collapsed-by-default disclosure for the long founder story. `teaser` and
+  // `cta` are the only display strings here; the expanded payload reuses
+  // founderStory.headline + founderStory.body verbatim (no new narrative).
+  storyExpander: {
+    // Derived from founderStory.headline (verbatim).
+    teaser:
+      "The scariest part of growing is seeing how much the business still runs on your memory.",
+    cta: "Read why we built this",
   },
   continuityReframe: {
     headline: "Most businesses don't have a software problem.",
@@ -202,13 +254,13 @@ export const INITIATION_HOMEPAGE_CONTENT = {
       },
       {
         src: "/product/calendar.png",
-        label: "Calendar",
-        caption: "A month of jobs, color-coded from pending to complete.",
+        label: "Pending queue",
+        caption: "Jobs waiting on confirmation — open, assign, and dispatch from one queue.",
       },
       {
         src: "/product/staff-schedule.png",
-        label: "Staff schedule",
-        caption: "A live staffing matrix — who's working, and what's still unassigned.",
+        label: "Operations pipeline",
+        caption: "Pipeline health, crew load, and upcoming jobs in one operations view.",
       },
       {
         src: "/product/job-workspace.png",
@@ -342,6 +394,65 @@ export const INITIATION_HOMEPAGE_CONTENT = {
       ctaTarget: VESSA_WAITLIST_URL,
     },
   },
+  // PAIN ⇄ PRODUCT BANDS — terse alternating editorial spreads that blend a
+  // known pain line with the product moment that resolves it. Every `line` and
+  // `benefit` is reused verbatim from copy already present in this file
+  // (founderPain.body, hero.supportingCopy, whatYouGet.features blurbs). No new
+  // product claims are invented. Headlines are short paraphrases built only from
+  // concepts already present above. Not wired into any page yet.
+  painProduct: [
+    {
+      id: "knows",
+      headline: "The system should already know",
+      // founderPain.body[0] (verbatim)
+      line: "Your team asks you things the system should already know.",
+      // whatYouGet.features[0].blurb (verbatim)
+      benefit: "Every job in one place, from request to done.",
+      image: "/product/job-workspace.png",
+      imageKind: "wide",
+      industry: "field-service",
+      tone: "dark",
+    },
+    {
+      id: "reports",
+      // hero.spotlight clue hint "The whole operation, one view." (verbatim)
+      headline: "The whole operation, one view",
+      // founderPain.body[2] (verbatim)
+      line: "Reports get rushed the morning they're due.",
+      // whatYouGet.features[9].blurb (verbatim)
+      benefit: "The whole operation, visible at once.",
+      image: "/product/dashboard.png",
+      imageKind: "wide",
+      industry: "home-services",
+      tone: "light",
+    },
+    {
+      id: "slips",
+      // derived from founderPain.body[4] ("starts slipping" + "catches it in time")
+      headline: "Catch the slip in time",
+      // founderPain.body[4] (verbatim)
+      line: "A project starts slipping, and no one catches it in time.",
+      // whatYouGet.features[1].blurb (verbatim)
+      benefit: "See the whole week and what's coming.",
+      image: "/product/staff-schedule.png",
+      imageKind: "wide",
+      industry: "property-services",
+      tone: "dark",
+    },
+    {
+      id: "delays",
+      // derived from hero.supportingCopy[2] ("Customers feel delays.")
+      headline: "When customers feel delays",
+      // hero.supportingCopy[2] (verbatim)
+      line: "Customers feel delays.",
+      // whatYouGet.features[6].blurb (verbatim)
+      benefit: "Customers see status without calling you.",
+      image: "/product/booking-pick-time.png",
+      imageKind: "phone",
+      industry: "real-estate-media",
+      tone: "light",
+    },
+  ],
   finalCta: {
     headline: "Your business shouldn't feel heavier every time it grows.",
     body: [

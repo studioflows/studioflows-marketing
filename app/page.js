@@ -29,13 +29,9 @@ export default function HomePage() {
         <InitiationFounderPainSection content={C.founderPain} />
         <InitiationDependencySelectorSection content={C.dependencySelector} />
         <InitiationFounderStorySection content={C.founderStory} />
-        <InitiationContinuityReframeSection content={C.continuityReframe} />
-        {/* lightly-sprinkled anchor after the pain climax (dark) */}
-        <InlineCtaAnchor
-          href={C.hero.primaryCtaTarget}
-          label={C.hero.primaryCta}
-          tone="dark"
-          bg="#09090F"
+        <InitiationContinuityReframeSection
+          content={C.continuityReframe}
+          inlineCta={{ href: C.hero.primaryCtaTarget, label: C.hero.primaryCta }}
         />
         <InitiationAICategorySection content={C.aiCategorySeparation} />
 
@@ -50,7 +46,6 @@ export default function HomePage() {
           href={C.hero.primaryCtaTarget}
           label={C.hero.primaryCta}
           tone="dark"
-          bg="#08080d"
         />
 
         {/* THE TURN — the noir is killed and the page is reborn in light. */}
