@@ -81,11 +81,14 @@ export async function POST(req: NextRequest) {
   }
 
   const supabaseLeadId = crypto.randomUUID();
-  const qualifiedRow = buildQualifiedLeadRow(raw, { score, reasons, qualified }, tier);
-  qualifiedRow.id = supabaseLeadId;
-  qualifiedRow.metadata = {
-    ...qualifiedRow.metadata,
-    ...attribution,
+  const qualifiedBase = buildQualifiedLeadRow(raw, { score, reasons, qualified }, tier);
+  const qualifiedRow = {
+    ...qualifiedBase,
+    id: supabaseLeadId,
+    metadata: {
+      ...qualifiedBase.metadata,
+      ...attribution,
+    },
   };
 
   // Do not chain .select() here: anon RLS allows INSERT but has no SELECT policy,
