@@ -661,13 +661,19 @@ function randomGlyph() {
 
 // Decode-on-load: each glyph churns through noise, then locks left-to-right into
 // the real character. SSR/reduced-motion render the final text immediately.
-function ScrambleText({ text, className = "", as: Tag = "span", delayMs = 0 }) {
+function ScrambleText({ text, className = "", as: Tag = "span", delayMs = 0, onComplete }) {
   const reduce = useReducedMotion();
   const [output, setOutput] = useState(text);
+  const onCompleteRef = useRef(onComplete);
+
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
 
   useEffect(() => {
     if (reduce) {
       setOutput(text);
+      onCompleteRef.current?.();
       return undefined;
     }
 
@@ -703,6 +709,7 @@ function ScrambleText({ text, className = "", as: Tag = "span", delayMs = 0 }) {
         raf = requestAnimationFrame(tick);
       } else {
         setOutput(text);
+        onCompleteRef.current?.();
       }
     };
 
@@ -734,28 +741,24 @@ function BlinkingCaret({ className = "" }) {
   );
 }
 
-// The centerpiece. The word decodes in, holds long enough to read, then
-// corrupts and dissolves letter-by-letter (right to left) into ghosts — the
-// business without you — holds the absence, then reassembles. Plays once.
-function HeadlineDisappear({ text, className = "", startDelayMs = 0 }) {
+// Stable on load. After the lines above finish scrambling, fades letter-by-letter
+// into ghosts, holds the absence, then reassembles. Plays once.
+function HeadlineDisappear({ text, className = "", active = false, holdBeforeFadeMs = 650 }) {
   const reduce = useReducedMotion();
   const chars = useMemo(() => text.split(""), [text]);
   const [display, setDisplay] = useState(chars);
   const [vis, setVis] = useState(() => chars.map(() => true));
 
   useEffect(() => {
-    if (reduce) {
-      setDisplay(chars);
-      setVis(chars.map(() => true));
+    setDisplay(chars);
+    setVis(chars.map(() => true));
+  }, [chars]);
+
+  useEffect(() => {
+    if (reduce || !active) {
       return undefined;
     }
 
-    const len = chars.length;
-    const settle = chars.map(
-      (_, i) => 24 + Math.round((i / Math.max(len, 1)) * 56) + Math.floor(Math.random() * 18),
-    );
-    let frame = 0;
-    let raf = 0;
     const timers = [];
 
     const reform = () => {
@@ -772,7 +775,7 @@ function HeadlineDisappear({ text, className = "", startDelayMs = 0 }) {
               n[i] = true;
               return n;
             });
-          }, i * 95),
+          }, i * 65),
         );
       });
     };
@@ -782,55 +785,24 @@ function HeadlineDisappear({ text, className = "", startDelayMs = 0 }) {
       order.forEach((idx, k) => {
         timers.push(
           window.setTimeout(() => {
-            setDisplay((d) => {
-              const n = [...d];
-              if (chars[idx] !== " ") n[idx] = randomGlyph();
-              return n;
-            });
             setVis((v) => {
               const n = [...v];
               n[idx] = false;
               return n;
             });
-          }, k * 135),
+          }, k * 85),
         );
       });
-      const goneAt = order.length * 135;
-      timers.push(window.setTimeout(reform, goneAt + 1150));
+      const goneAt = order.length * 85;
+      timers.push(window.setTimeout(reform, goneAt + 450));
     };
 
-    const decodeIn = () => {
-      let settled = 0;
-      setDisplay(
-        chars.map((c, i) => {
-          if (c === " " || frame >= settle[i]) {
-            settled += 1;
-            return c;
-          }
-          return Math.random() < 0.32 ? randomGlyph() : display[i];
-        }),
-      );
-      frame += 1;
-      if (settled < len) {
-        raf = requestAnimationFrame(decodeIn);
-      } else {
-        setDisplay(chars);
-        timers.push(window.setTimeout(dissolve, 1900));
-      }
-    };
-
-    timers.push(
-      window.setTimeout(() => {
-        raf = requestAnimationFrame(decodeIn);
-      }, startDelayMs),
-    );
+    timers.push(window.setTimeout(dissolve, holdBeforeFadeMs));
 
     return () => {
-      cancelAnimationFrame(raf);
       timers.forEach((t) => window.clearTimeout(t));
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reduce, chars, startDelayMs]);
+  }, [reduce, chars, active, holdBeforeFadeMs]);
 
   return (
     <span className={className} aria-label={text}>
@@ -1433,6 +1405,10 @@ const DEPENDENCY_OPTION_IDLE =
 export function InitiationHeroSection({ content }) {
   const reduce = useReducedMotion();
   const sectionRef = useRef(null);
+  const [disappearFadeActive, setDisappearFadeActive] = useState(false);
+  const handleHeadlineScrambleComplete = useCallback(() => {
+    setDisappearFadeActive(true);
+  }, []);
 
   const { scrollYProgress } = useScroll({
     target: sectionRef,
@@ -1502,8 +1478,18 @@ export function InitiationHeroSection({ content }) {
               className="max-w-[13ch] font-serif text-[2.85rem] font-semibold leading-[0.9] tracking-[-0.045em] text-[#E8E6E3] sm:text-[4rem] lg:text-[5rem]"
             >
               <ScrambleText as="span" className="block" text="Your business" delayMs={300} />
-              <ScrambleText as="span" className="block" text="knows when you" delayMs={1600} />
-              <HeadlineDisappear className="block text-[#DB2777]" text="disappear." startDelayMs={3300} />
+              <ScrambleText
+                as="span"
+                className="block"
+                text="knows when you"
+                delayMs={1600}
+                onComplete={handleHeadlineScrambleComplete}
+              />
+              <HeadlineDisappear
+                className="block text-[#DB2777]"
+                text="disappear."
+                active={disappearFadeActive}
+              />
             </h1>
             <p className="mt-5 max-w-md text-[15px] leading-7 text-[#C2BFBA] sm:mt-6 sm:text-base sm:leading-8 lg:max-w-lg">
               {content.subheadline}
