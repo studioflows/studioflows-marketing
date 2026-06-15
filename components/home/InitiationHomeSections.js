@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { BookCallLink } from "@/components/home/BookCallLink";
 import {
   createContext,
   useCallback,
@@ -1514,12 +1513,12 @@ export function InitiationHeroSection({ content }) {
               >
                 {content.primaryCta}
               </Link>
-              <BookCallLink
+              <Link
                 href={content.secondaryCtaTarget}
                 className="inline-flex min-h-[48px] w-full items-center justify-center rounded-full border border-white/20 bg-white/[0.05] px-7 py-3 text-sm font-semibold text-[#E8E6E3] transition hover:border-[#DB2777]/40 hover:bg-[#DB2777]/[0.06]"
               >
                 {content.secondaryCta}
-              </BookCallLink>
+              </Link>
               {content.funnelHelperCopy ? (
                 <p className="text-sm leading-6 text-[#9B9894]">{content.funnelHelperCopy}</p>
               ) : null}
@@ -1547,12 +1546,12 @@ export function InitiationHeroSection({ content }) {
               >
             {content.primaryCta}
           </Link>
-              <BookCallLink
+              <Link
                 href={content.secondaryCtaTarget}
                 className="inline-flex min-h-[48px] items-center justify-center rounded-full border border-white/15 bg-white/[0.03] px-7 py-3 text-sm font-semibold text-[#E8E6E3] transition hover:border-[#DB2777]/40 hover:bg-[#DB2777]/[0.06]"
               >
             {content.secondaryCta}
-          </BookCallLink>
+          </Link>
         </div>
             {content.funnelHelperCopy ? (
               <p className="mt-4 max-w-md text-sm leading-6 text-[#9B9894]">{content.funnelHelperCopy}</p>
@@ -5162,12 +5161,12 @@ export function InitiationFoundingProgramSection({ content }) {
                 →
               </span>
             </Link>
-            <BookCallLink
+            <Link
               href={content.secondaryCtaTarget}
               className="inline-flex min-h-[52px] items-center justify-center rounded-full border border-white/20 px-8 py-3.5 text-sm font-semibold text-[#E8E6E3] transition hover:border-white/40 hover:bg-white/[0.04]"
             >
               {content.secondaryCta}
-            </BookCallLink>
+            </Link>
           </div>
           {content.funnelHelperCopy ? (
             <p className="mt-4 max-w-2xl text-sm leading-7 text-[#9B9894]">{content.funnelHelperCopy}</p>
@@ -6463,12 +6462,12 @@ export function InitiationFinalCtaSection({ content }) {
                   </span>
             </Link>
               </div>
-              <BookCallLink
+              <Link
                 href={content.secondaryCtaTarget}
                 className="inline-flex min-h-[54px] items-center justify-center rounded-full border border-black/20 bg-transparent px-9 py-4 text-sm font-semibold text-[#0B0B0C] transition hover:bg-black/5"
               >
               {content.secondaryCta}
-            </BookCallLink>
+            </Link>
           </div>
           {content.funnelHelperCopy ? (
             <p className="mt-6 max-w-2xl text-sm leading-7 text-[#6B6557]">{content.funnelHelperCopy}</p>

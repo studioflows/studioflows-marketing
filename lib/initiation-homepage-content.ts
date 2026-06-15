@@ -1,15 +1,6 @@
 // ── CTA destinations ─────────────────────────────────────────────────────────
-// Single source of truth for where every homepage CTA points. Swap these two
-// values with the StudioFlows OS tenant redirect links so leads + appointments
-// land inside the OS account:
-//   OS_DIAGNOSTIC_URL  → the OS quiz funnel / booking flow (every "diagnostic" CTA)
-//   VESSA_WAITLIST_URL → the OS Vessa invitation / waitlist flow
-// Interim values keep the on-site routes working until the OS links are provided.
-import { buildDirectOpsAuditBookUrl } from "./lead-attribution";
-
+// Every homepage CTA routes to the 6-question Ops Check pre-qualifier first.
 const OS_DIAGNOSTIC_URL = "/apply";
-const VESSA_WAITLIST_URL = "/vessa";
-const OS_OPS_AUDIT_BOOK_URL = buildDirectOpsAuditBookUrl("homepage-direct-book");
 
 export const HOMEPAGE_FUNNEL_HELPER_COPY =
   "Not sure if you need help yet? Start with the Ops Check. If you already know things are messy, book the audit.";
@@ -30,7 +21,7 @@ export const INITIATION_HOMEPAGE_CONTENT = {
     primaryCta: "Take the 60-second Ops Check",
     primaryCtaTarget: OS_DIAGNOSTIC_URL,
     secondaryCta: "Book the Ops Audit",
-    secondaryCtaTarget: OS_OPS_AUDIT_BOOK_URL,
+    secondaryCtaTarget: OS_DIAGNOSTIC_URL,
     funnelHelperCopy: HOMEPAGE_FUNNEL_HELPER_COPY,
     // Hero "flashlight in the dark" reveal — the OS is hidden in shadow; the
     // beam roams across it like a detective finding clues. Real product views.
@@ -323,7 +314,7 @@ export const INITIATION_HOMEPAGE_CONTENT = {
     primaryCta: "Take the 60-second Ops Check",
     primaryCtaTarget: OS_DIAGNOSTIC_URL,
     secondaryCta: "Book the Ops Audit",
-    secondaryCtaTarget: OS_OPS_AUDIT_BOOK_URL,
+    secondaryCtaTarget: OS_DIAGNOSTIC_URL,
     funnelHelperCopy: HOMEPAGE_FUNNEL_HELPER_COPY,
   },
 
@@ -398,7 +389,7 @@ export const INITIATION_HOMEPAGE_CONTENT = {
       bestFor:
         "Owners who want AI execution across ClickUp, Slack, and email without replacing their entire operating system.",
       cta: "Start with Vessa",
-      ctaTarget: VESSA_WAITLIST_URL,
+      ctaTarget: OS_DIAGNOSTIC_URL,
     },
   },
   // PAIN ⇄ PRODUCT BANDS — terse alternating editorial spreads that blend a
@@ -471,7 +462,7 @@ export const INITIATION_HOMEPAGE_CONTENT = {
     primaryCta: "Take the 60-second Ops Check",
     primaryCtaTarget: OS_DIAGNOSTIC_URL,
     secondaryCta: "Book the Ops Audit",
-    secondaryCtaTarget: OS_OPS_AUDIT_BOOK_URL,
+    secondaryCtaTarget: OS_DIAGNOSTIC_URL,
     funnelHelperCopy: HOMEPAGE_FUNNEL_HELPER_COPY,
   },
 } as const;
