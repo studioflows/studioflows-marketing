@@ -5,18 +5,20 @@
 //   OS_DIAGNOSTIC_URL  → the OS quiz funnel / booking flow (every "diagnostic" CTA)
 //   VESSA_WAITLIST_URL → the OS Vessa invitation / waitlist flow
 // Interim values keep the on-site routes working until the OS links are provided.
+import { buildDirectOpsAuditBookUrl } from "./lead-attribution";
+
 const OS_DIAGNOSTIC_URL = "/apply";
 const VESSA_WAITLIST_URL = "/vessa";
-// "Book a workflow review" — qualified applicants are routed to booking through
-// the same fit-check funnel today, so this mirrors OS_DIAGNOSTIC_URL. Swap to a
-// dedicated booking link if/when qualified routing splits off.
-const WORKFLOW_REVIEW_URL = OS_DIAGNOSTIC_URL;
+const OS_OPS_AUDIT_BOOK_URL = buildDirectOpsAuditBookUrl("homepage-direct-book");
+
+export const HOMEPAGE_FUNNEL_HELPER_COPY =
+  "Not sure if you need help yet? Start with the Ops Check. If you already know things are messy, book the audit.";
 
 export const INITIATION_HOMEPAGE_CONTENT = {
   hero: {
     eyebrow: "Built for owners who run service businesses",
     headline: "Your business knows when you disappear.",
-    subheadline: "Run your service business from one place — with StudioFlows OS.",
+    subheadline: "Run your service business from one place, with StudioFlows OS.",
     supportingCopy: [
       "Jobs fall behind.",
       "Schedules get messy.",
@@ -25,10 +27,11 @@ export const INITIATION_HOMEPAGE_CONTENT = {
       "It's not because your team is lazy.",
       "It's because the business still runs on people remembering to hold it together.",
     ],
-    primaryCta: "See if StudioFlows is a fit",
+    primaryCta: "Take the 60-second Ops Check",
     primaryCtaTarget: OS_DIAGNOSTIC_URL,
-    secondaryCta: "See how it works",
-    secondaryCtaTarget: "#system",
+    secondaryCta: "Book the Ops Audit",
+    secondaryCtaTarget: OS_OPS_AUDIT_BOOK_URL,
+    funnelHelperCopy: HOMEPAGE_FUNNEL_HELPER_COPY,
     // Hero "flashlight in the dark" reveal — the OS is hidden in shadow; the
     // beam roams across it like a detective finding clues. Real product views.
     spotlight: {
@@ -72,6 +75,8 @@ export const INITIATION_HOMEPAGE_CONTENT = {
       ],
     },
   },
+  warmAuditCta: "Take the 60-second Ops Check",
+  warmAuditCtaTarget: OS_DIAGNOSTIC_URL,
   founderPain: {
     headline: "Somewhere along the way, you became the backup plan for everything.",
     body: [
@@ -174,7 +179,7 @@ export const INITIATION_HOMEPAGE_CONTENT = {
       "It brings the moving parts of a service business into one connected system.",
       "Jobs and scheduling. Customers and teams. Field updates, files, payments, and customer portals.",
       "Visibility from the first request to the final invoice.",
-      "Instead of work scattered across tools, spreadsheets, inboxes, texts, and memory —",
+      "Instead of work scattered across tools, spreadsheets, inboxes, texts, and memory,",
       "one place to run the business.",
     ],
   },
@@ -209,7 +214,7 @@ export const INITIATION_HOMEPAGE_CONTENT = {
       strike: "More software.",
       gold: "Less weight on you.",
     },
-    scrubLabelUnaided: "the night before — unaided",
+    scrubLabelUnaided: "the night before, unaided",
     scrubLabelSystem: "what StudioFlows keeps on the job",
     revealItems: [
       "One source of truth",
@@ -255,7 +260,7 @@ export const INITIATION_HOMEPAGE_CONTENT = {
       {
         src: "/product/calendar.png",
         label: "Pending queue",
-        caption: "Jobs waiting on confirmation — open, assign, and dispatch from one queue.",
+        caption: "Jobs waiting on confirmation: open, assign, and dispatch from one queue.",
       },
       {
         src: "/product/staff-schedule.png",
@@ -268,7 +273,7 @@ export const INITIATION_HOMEPAGE_CONTENT = {
         caption: "One job from booking to delivery: lifecycle, crew, status, and notes.",
       },
     ],
-    experienceIntro: "And the customer side — booking to paid, in your brand:",
+    experienceIntro: "And the customer side, booking to paid, in your brand:",
     experience: [
       {
         src: "/product/booking-cart.png",
@@ -315,10 +320,11 @@ export const INITIATION_HOMEPAGE_CONTENT = {
       "We map your workflow, set up the system, and help your team adopt it.",
     ],
     lockNote: "Founding customer pricing is locked in as long as your account stays active.",
-    primaryCta: "See if StudioFlows is a fit",
+    primaryCta: "Take the 60-second Ops Check",
     primaryCtaTarget: OS_DIAGNOSTIC_URL,
-    secondaryCta: "Book a workflow review",
-    secondaryCtaTarget: WORKFLOW_REVIEW_URL,
+    secondaryCta: "Book the Ops Audit",
+    secondaryCtaTarget: OS_OPS_AUDIT_BOOK_URL,
+    funnelHelperCopy: HOMEPAGE_FUNNEL_HELPER_COPY,
   },
 
   // 09 / BUILT FOR SERVICE LOOPS — ICP + lifecycle fit.
@@ -355,10 +361,11 @@ export const INITIATION_HOMEPAGE_CONTENT = {
       "where handoffs fail",
       "where customer updates get stuck",
       "where the owner still has to remember everything",
-      "whether StudioFlows OS is a fit now, or Vessa early access later",
+      "whether StudioFlows OS is a fit now, or Vessa for stack-native execution",
     ],
-    cta: "See if StudioFlows is a fit",
+    cta: "Take the 60-second Ops Check",
     ctaTarget: OS_DIAGNOSTIC_URL,
+    funnelHelperCopy: HOMEPAGE_FUNNEL_HELPER_COPY,
   },
   entryPaths: {
     headline: "One goal. Two ways to start.",
@@ -377,20 +384,20 @@ export const INITIATION_HOMEPAGE_CONTENT = {
       ],
       bestFor:
         "Owner-led service businesses ready to clean up operations now.",
-      cta: "Start the check",
+      cta: "Take the 60-second Ops Check",
       ctaTarget: OS_DIAGNOSTIC_URL,
     },
     card2: {
-      tag: "Coming soon · Vessa",
+      tag: "Available now · Vessa",
       headline: "Vessa",
-      subheadline: "AI operations assistance is opening later.",
+      subheadline: "Autonomous AI COO for the tools you already run.",
       body: [
-        "Vessa is the future intelligence layer for StudioFlows. It is not the main product today.",
-        "Join the early-access list if you want updates as it opens.",
+        "Vessa creates work, routes the right approval checkpoint, and moves operations forward across your stack.",
+        "Chat for speed. Decide for consequence. Execution with traceability.",
       ],
       bestFor:
-        "Owners interested in future AI assistance, even if StudioFlows OS isn't the right fit today.",
-      cta: "Ask for a Vessa invite",
+        "Owners who want AI execution across ClickUp, Slack, and email without replacing their entire operating system.",
+      cta: "Start with Vessa",
       ctaTarget: VESSA_WAITLIST_URL,
     },
   },
@@ -461,9 +468,10 @@ export const INITIATION_HOMEPAGE_CONTENT = {
       "Not another tool to babysit.",
       "One operating system for the work.",
     ],
-    primaryCta: "See if StudioFlows is a fit",
+    primaryCta: "Take the 60-second Ops Check",
     primaryCtaTarget: OS_DIAGNOSTIC_URL,
-    secondaryCta: "Ask for a Vessa invite",
-    secondaryCtaTarget: VESSA_WAITLIST_URL,
+    secondaryCta: "Book the Ops Audit",
+    secondaryCtaTarget: OS_OPS_AUDIT_BOOK_URL,
+    funnelHelperCopy: HOMEPAGE_FUNNEL_HELPER_COPY,
   },
 } as const;

@@ -207,3 +207,53 @@ body::before {
     opacity: 0.16;
   }
 }
+
+/* -------------------- */
+/* REM NOIR TERMINAL */
+/* -------------------- */
+
+.rem-noir-terminal {
+  --rem-cyan: rgba(34, 211, 238, 0.85);
+  --rem-flag: rgba(248, 113, 113, 0.75);
+}
+
+.rem-noir-terminal h1,
+.rem-noir-terminal h2,
+.rem-noir-terminal h3 {
+  font-family: var(--font-ibm-plex-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  letter-spacing: -0.02em;
+}
+
+.rem-scanlines {
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.15) 0px,
+    rgba(0, 0, 0, 0.15) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+  animation: remCrtFlicker 6s steps(120) infinite;
+}
+
+@keyframes remCrtFlicker {
+  0%,
+  100% {
+    opacity: 0.12;
+  }
+  48% {
+    opacity: 0.16;
+  }
+  49% {
+    opacity: 0.1;
+  }
+  50% {
+    opacity: 0.14;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rem-scanlines {
+    animation: none;
+    opacity: 0.08;
+  }
+}

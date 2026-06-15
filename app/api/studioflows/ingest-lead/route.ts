@@ -9,6 +9,7 @@ import {
   splitName,
   tierFromBudget,
 } from "@/lib/qualify-custom-ops-hub";
+import { resolveBookCallUrl } from "@/lib/lead-attribution";
 import { createMarketingSupabaseServerClient } from "@/lib/supabase-server";
 
 function pickAttribution(body: Record<string, unknown>) {
@@ -111,9 +112,10 @@ export async function POST(req: NextRequest) {
   const ingestUrl = process.env.STUDIOFLOWS_INGEST_URL?.replace(/\/$/, "");
   const tenantSlug = process.env.STUDIOFLOWS_TENANT_SLUG ?? "app";
   const token = process.env.STUDIOFLOWS_INGEST_TOKEN;
-  const apikey = process.env.SUPABASE_ANON_KEY;
+  const apikey = process.env.STUDIOFLOWS_INGEST_APIKEY ?? process.env.SUPABASE_ANON_KEY;
 
   let osLeadId: string | undefined;
+  let ingestBody: Record<string, unknown> = {};
   if (ingestUrl && token && apikey) {
     try {
       const ingestRes = await fetch(`${ingestUrl}/consulting-ingest-lead`, {
@@ -145,7 +147,7 @@ export async function POST(req: NextRequest) {
         }),
       });
 
-      const ingestBody = (await ingestRes.json().catch(() => ({}))) as Record<string, unknown>;
+      ingestBody = (await ingestRes.json().catch(() => ({}))) as Record<string, unknown>;
       if (ingestRes.ok) {
         osLeadId = ingestBody.lead_id as string | undefined;
       }
@@ -166,12 +168,20 @@ export async function POST(req: NextRequest) {
   params.set("from", "custom-ops-hub");
   const redirectUrl = `${consultingBase}?${params.toString()}`;
 
+  const bookFrom = attribution.src === "homepage-diagnosis" ? "homepage-diagnosis" : "custom-ops-hub";
+  const bookCallUrl = resolveBookCallUrl({
+    ingestBookCallUrl: typeof ingestBody.book_call_url === "string" ? ingestBody.book_call_url : null,
+    leadId,
+    from: bookFrom,
+  });
+
   return NextResponse.json({
     qualified: true,
     score,
     reasons,
     lead_id: leadId,
-    redirect_url: redirectUrl,
+    book_call_url: bookCallUrl,
+    redirect_url: bookCallUrl ?? redirectUrl,
     recommended_tier: tier,
   });
 }

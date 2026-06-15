@@ -44,7 +44,7 @@ export default function VessaTeaserSection({ features }: Props) {
       <div className="mt-6">
         <Link
           href="/vessa"
-          className="inline-flex rounded-xl bg-[#FACC15] px-6 py-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-black transition hover:brightness-105"
+          className="inline-flex rounded-xl bg-[#D4A853] px-6 py-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#030304] transition hover:brightness-105"
         >
           Explore Vessa
         </Link>

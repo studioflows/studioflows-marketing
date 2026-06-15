@@ -8,7 +8,32 @@ export const HOMEPAGE_CTA = {
   diagnosisLabel: "Start the 30-Second Diagnosis",
   vessaWaitlistLabel: "Join Vessa Waitlist",
   vessaWaitlistHref: "/vessa",
-  auditLabel: "Book an OPS Drag Audit",
+  auditLabel: "Get Your Ops Teardown",
+  bookAuditLabel: "Book a Quick Call",
+  qualifiedChoiceHelperCopy:
+    "Answer the next set of questions and we'll turn them into a clear Ops Teardown based on how you actually run things. Takes about 2 minutes. PDF comes right after.",
+} as const;
+
+export const OPS_CHECK_LOW_FIT_COPY = {
+  eyebrow: "Ops Check complete",
+  helper:
+    "An audit slot is probably not the right move yet. You can still follow practical ops content, retake the check later, or get early access to Vessa.",
+  byScoreBand: [
+    {
+      maxScore: 3,
+      title: "Execution looks fairly contained",
+      body: "From your answers, operational drag looks low right now. That usually means the basics are holding and you do not need a full Ops Audit yet.",
+      guidance:
+        "Keep tightening handoffs as you grow. If drag shows up later — especially around scheduling, owner routing, or client updates — retake the check.",
+    },
+    {
+      maxScore: 7,
+      title: "Some drag, not enough for an audit slot yet",
+      body: "You have pockets of friction, but not the level of founder bottleneck or margin leakage we usually see before an Ops Audit makes sense.",
+      guidance:
+        "Useful next steps: watch for where work still routes through you, and retake the check if that pattern gets worse over the next few months.",
+    },
+  ],
 } as const;
 
 export const HERO = {

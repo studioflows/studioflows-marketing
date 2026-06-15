@@ -24,12 +24,12 @@ export const ENGAGEMENT_PATHS: EngagementPath[] = [
     label: "Optimize",
     tagline: "Your stack. Smarter execution.",
     description:
-      "Optimize how work moves through the tools you already run—with Vessa connecting email, Slack, and your operating layer without a full rip-and-replace.",
+      "Vessa is the autonomous AI COO for your Ops Hub — chat to move fast, Decide for high-impact checkpoints, and execution across ClickUp, Slack, email, and the tools you already run.",
     highlight: "Flagship: Vessa",
     url: "/vessa",
     status: "live",
     indexable: true,
-    cta: "Explore Vessa",
+    cta: "Start with Vessa",
   },
   {
     id: "accelerate",

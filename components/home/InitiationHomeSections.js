@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { BookCallLink } from "@/components/home/BookCallLink";
 import {
   createContext,
   useCallback,
@@ -681,7 +682,7 @@ function ScrambleText({ text, className = "", as: Tag = "span", delayMs = 0, onC
     const offset = Math.round(delayMs / 16);
     const queue = text.split("").map((char, index) => ({
       char,
-      settle: offset + 26 + Math.round((index / Math.max(len, 1)) * 60) + Math.floor(Math.random() * 20),
+      settle: offset + 10 + Math.round((index / Math.max(len, 1)) * 24) + Math.floor(Math.random() * 8),
       rand: randomGlyph(),
     }));
 
@@ -692,12 +693,15 @@ function ScrambleText({ text, className = "", as: Tag = "span", delayMs = 0, onC
       let settled = 0;
       const next = queue
         .map((q) => {
-          if (q.char === " ") return " ";
+          if (q.char === " ") {
+            settled += 1;
+            return " ";
+          }
           if (frame >= q.settle) {
             settled += 1;
             return q.char;
           }
-          if (Math.random() < 0.3) q.rand = randomGlyph();
+          if (Math.random() < 0.34) q.rand = randomGlyph();
           return q.rand;
         })
         .join("");
@@ -741,23 +745,21 @@ function BlinkingCaret({ className = "" }) {
   );
 }
 
-// Stable on load. After the lines above finish scrambling, fades letter-by-letter
-// into ghosts, holds the absence, then reassembles. Plays once.
-function HeadlineDisappear({ text, className = "", active = false, holdBeforeFadeMs = 650 }) {
+// Stable on load. No scramble. After the lines above finish, ghost-fades
+// letter-by-letter (right to left), holds, then reassembles. Plays once.
+function HeadlineDisappear({ text, className = "", active = false, holdBeforeFadeMs = 500 }) {
   const reduce = useReducedMotion();
   const chars = useMemo(() => text.split(""), [text]);
-  const [display, setDisplay] = useState(chars);
   const [vis, setVis] = useState(() => chars.map(() => true));
+  const fadeStartedRef = useRef(false);
 
   useEffect(() => {
-    setDisplay(chars);
-    setVis(chars.map(() => true));
-  }, [chars]);
-
-  useEffect(() => {
-    if (reduce || !active) {
+    if (reduce || !active || fadeStartedRef.current) {
       return undefined;
     }
+
+    fadeStartedRef.current = true;
+    setVis(chars.map(() => true));
 
     const timers = [];
 
@@ -765,17 +767,12 @@ function HeadlineDisappear({ text, className = "", active = false, holdBeforeFad
       chars.forEach((_, i) => {
         timers.push(
           window.setTimeout(() => {
-            setDisplay((d) => {
-              const n = [...d];
-              n[i] = chars[i];
-              return n;
-            });
             setVis((v) => {
               const n = [...v];
               n[i] = true;
               return n;
             });
-          }, i * 65),
+          }, i * 70),
         );
       });
     };
@@ -790,11 +787,11 @@ function HeadlineDisappear({ text, className = "", active = false, holdBeforeFad
               n[idx] = false;
               return n;
             });
-          }, k * 85),
+          }, k * 90),
         );
       });
-      const goneAt = order.length * 85;
-      timers.push(window.setTimeout(reform, goneAt + 450));
+      const goneAt = order.length * 90;
+      timers.push(window.setTimeout(reform, goneAt + 550));
     };
 
     timers.push(window.setTimeout(dissolve, holdBeforeFadeMs));
@@ -806,15 +803,16 @@ function HeadlineDisappear({ text, className = "", active = false, holdBeforeFad
 
   return (
     <span className={className} aria-label={text}>
-      {display.map((ch, i) => (
+      {chars.map((ch, i) => (
         <motion.span
-          key={i}
+          key={`${ch}-${i}`}
           aria-hidden="true"
           className="inline-block"
+          initial={false}
           animate={{
-            opacity: vis[i] ? 1 : 0.07,
-            filter: vis[i] ? "blur(0px)" : "blur(11px)",
-            y: vis[i] ? 0 : -5,
+            opacity: vis[i] ? 1 : 0.06,
+            filter: vis[i] ? "blur(0px)" : "blur(12px)",
+            y: vis[i] ? 0 : -6,
           }}
           transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
         >
@@ -938,7 +936,7 @@ function HeroInterceptFeed({ lines }) {
           <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#DB2777]" />
         </span>
         intercepting signal
-        <span className="text-[#9B9894]/40">— founder channel</span>
+        <span className="text-[#9B9894]/40">· founder channel</span>
       </div>
 
       <div className="space-y-3.5">
@@ -1025,7 +1023,7 @@ function SpotlightClueImage({ clue, layout }) {
   return (
     <Image
       src={imageSrc}
-      alt={`StudioFlows OS — ${clue.label}`}
+      alt={`StudioFlows OS, ${clue.label}`}
       fill
       unoptimized={native}
       quality={100}
@@ -1126,7 +1124,7 @@ function HeroSpotlightReveal({ clues, caption }) {
           <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#D4A853]" />
         </span>
         {caption}
-        <span className="text-[#9B9894]/40">— restricted preview</span>
+        <span className="text-[#9B9894]/40">· restricted preview</span>
       </div>
 
       <div
@@ -1405,8 +1403,12 @@ const DEPENDENCY_OPTION_IDLE =
 export function InitiationHeroSection({ content }) {
   const reduce = useReducedMotion();
   const sectionRef = useRef(null);
+  const [line2ScrambleReady, setLine2ScrambleReady] = useState(false);
   const [disappearFadeActive, setDisappearFadeActive] = useState(false);
-  const handleHeadlineScrambleComplete = useCallback(() => {
+  const handleLine1ScrambleComplete = useCallback(() => {
+    setLine2ScrambleReady(true);
+  }, []);
+  const handleLine2ScrambleComplete = useCallback(() => {
     setDisappearFadeActive(true);
   }, []);
 
@@ -1431,7 +1433,7 @@ export function InitiationHeroSection({ content }) {
       <section
         ref={sectionRef}
         aria-labelledby="initiation-hero-heading"
-        className="relative isolate flex min-h-[100svh] flex-col justify-between overflow-hidden px-5 pb-9 pt-6 sm:px-8 sm:pb-12 lg:px-20"
+        className="relative isolate flex min-h-[72vh] flex-col justify-between overflow-hidden px-5 pb-9 pt-6 sm:px-8 sm:pb-12 lg:min-h-[100svh] lg:px-20"
       >
         <HeroForceField progress={scrollYProgress} />
         <HeroInterfaceOverlay />
@@ -1477,14 +1479,24 @@ export function InitiationHeroSection({ content }) {
           id="initiation-hero-heading"
               className="max-w-[13ch] font-serif text-[2.85rem] font-semibold leading-[0.9] tracking-[-0.045em] text-[#E8E6E3] sm:text-[4rem] lg:text-[5rem]"
             >
-              <ScrambleText as="span" className="block" text="Your business" delayMs={300} />
               <ScrambleText
                 as="span"
                 className="block"
-                text="knows when you"
-                delayMs={1600}
-                onComplete={handleHeadlineScrambleComplete}
+                text="Your business"
+                delayMs={80}
+                onComplete={handleLine1ScrambleComplete}
               />
+              {line2ScrambleReady ? (
+                <ScrambleText
+                  as="span"
+                  className="block"
+                  text="knows when you"
+                  delayMs={40}
+                  onComplete={handleLine2ScrambleComplete}
+                />
+              ) : (
+                <span className="block">knows when you</span>
+              )}
               <HeadlineDisappear
                 className="block text-[#DB2777]"
                 text="disappear."
@@ -1494,6 +1506,24 @@ export function InitiationHeroSection({ content }) {
             <p className="mt-5 max-w-md text-[15px] leading-7 text-[#C2BFBA] sm:mt-6 sm:text-base sm:leading-8 lg:max-w-lg">
               {content.subheadline}
             </p>
+
+            <div className="mt-6 flex flex-col gap-3 lg:hidden">
+              <Link
+                href={content.primaryCtaTarget}
+                className="inline-flex min-h-[52px] w-full items-center justify-center rounded-full bg-[#E8E6E3] px-7 py-3.5 text-[15px] font-semibold text-[#030304] shadow-[0_8px_32px_rgba(232,230,227,0.18)] transition hover:bg-white"
+              >
+                {content.primaryCta}
+              </Link>
+              <BookCallLink
+                href={content.secondaryCtaTarget}
+                className="inline-flex min-h-[48px] w-full items-center justify-center rounded-full border border-white/20 bg-white/[0.05] px-7 py-3 text-sm font-semibold text-[#E8E6E3] transition hover:border-[#DB2777]/40 hover:bg-[#DB2777]/[0.06]"
+              >
+                {content.secondaryCta}
+              </BookCallLink>
+              {content.funnelHelperCopy ? (
+                <p className="text-sm leading-6 text-[#9B9894]">{content.funnelHelperCopy}</p>
+              ) : null}
+            </div>
           </div>
 
           {/* B — spotlight reveal: flashlight in the dark over the OS */}
@@ -1504,8 +1534,8 @@ export function InitiationHeroSection({ content }) {
             />
           </div>
 
-          {/* C — actions */}
-          <div className="order-3 max-w-xl lg:col-start-1 lg:row-start-2">
+          {/* C — actions (desktop; mobile CTAs live under subheadline for first-viewport visibility) */}
+          <div className="order-3 hidden max-w-xl lg:col-start-1 lg:row-start-2 lg:block">
             <p className="font-mono text-[11px] leading-6 tracking-[0.02em] text-[#D4A853]/70">
               // most operators never see the layer underneath.
             </p>
@@ -1517,13 +1547,16 @@ export function InitiationHeroSection({ content }) {
               >
             {content.primaryCta}
           </Link>
-              <Link
+              <BookCallLink
                 href={content.secondaryCtaTarget}
                 className="inline-flex min-h-[48px] items-center justify-center rounded-full border border-white/15 bg-white/[0.03] px-7 py-3 text-sm font-semibold text-[#E8E6E3] transition hover:border-[#DB2777]/40 hover:bg-[#DB2777]/[0.06]"
               >
             {content.secondaryCta}
-          </Link>
+          </BookCallLink>
         </div>
+            {content.funnelHelperCopy ? (
+              <p className="mt-4 max-w-md text-sm leading-6 text-[#9B9894]">{content.funnelHelperCopy}</p>
+            ) : null}
           </div>
         </motion.div>
 
@@ -1682,7 +1715,7 @@ export function InitiationFounderPainSection({ content }) {
     <section
       ref={sectionRef}
       aria-labelledby="initiation-founder-pain-heading"
-      className="relative -mt-20 overflow-hidden bg-[#040406] pb-24 pt-28 sm:-mt-24 sm:pb-28 sm:pt-36"
+      className="relative -mt-20 overflow-hidden bg-[#040406] pb-12 pt-12 sm:-mt-24 sm:pb-16 sm:pt-16 lg:pb-28 lg:pt-36"
     >
       <div
         className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-36 bg-gradient-to-b from-[#030304] via-[#030304]/92 to-transparent sm:h-32"
@@ -2000,7 +2033,7 @@ export function InitiationDependencySelectorSection({ content }) {
     <section
       ref={sectionRef}
       aria-labelledby="initiation-dependency-heading"
-      className="relative z-10 scroll-mt-24 overflow-hidden bg-[#050507] py-20 sm:py-24 lg:py-28"
+      className="relative z-10 scroll-mt-24 overflow-hidden bg-[#050507] py-12 sm:py-16 lg:py-28"
     >
       <SectionBleed />
       <motion.div
@@ -2387,7 +2420,7 @@ function ConfessionRealityBreak({ surface, breakLine, scattered }) {
                     ) : null}
                     <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#6FB58E]" />
                   </span>
-                  system status — all good
+                  system status: all good
                 </div>
                 <p className="mt-7 text-sm leading-7 text-[#9B9894]">{surface[0]}</p>
                 <p className="mt-3 font-serif text-2xl font-semibold leading-tight tracking-[-0.02em] text-[#EEF1ED] sm:text-3xl">
@@ -2723,7 +2756,7 @@ export function InitiationFounderStorySection({ content }) {
     <section
       ref={sectionRef}
       aria-labelledby="initiation-founder-story-heading"
-      className="relative z-10 scroll-mt-24 overflow-hidden bg-[#07070C] py-24 sm:py-28 lg:py-36"
+      className="relative z-10 scroll-mt-24 overflow-hidden bg-[#07070C] py-12 sm:py-16 lg:py-36"
     >
       <SectionBleed />
       <div
@@ -2797,21 +2830,33 @@ export function InitiationFounderStorySection({ content }) {
             </p>
             {(() => {
               const truthLine = finalTruth[finalTruth.length - 1];
-              const KERNEL = "not strong enough";
-              const idx = truthLine.indexOf(KERNEL);
-              const pre = idx >= 0 ? truthLine.slice(0, idx).trim() : truthLine;
-              const post = idx >= 0 ? truthLine.slice(idx + KERNEL.length).trim() : "";
+              const ACCENT = "not";
+              const SUFFIX = "strong enough";
+              const accentIdx = truthLine.indexOf(ACCENT);
+              const prefix =
+                accentIdx >= 0 ? truthLine.slice(0, accentIdx).trim() : "The system was";
+              const afterAccent =
+                accentIdx >= 0 ? truthLine.slice(accentIdx + ACCENT.length).trim() : truthLine;
+              const suffixIdx = afterAccent.indexOf(SUFFIX);
+              const suffix = suffixIdx >= 0 ? SUFFIX : afterAccent;
+              const post =
+                suffixIdx >= 0 ? afterAccent.slice(suffixIdx + SUFFIX.length).trim() : "";
               return (
                 <div className="mt-8 rounded-[2rem] border border-[#DB2777]/15 bg-[#120A10]/40 p-6 shadow-[0_30px_120px_rgba(0,0,0,0.35)] sm:p-8 lg:p-10">
                   <p className="text-base leading-8 text-[#9B9894]">{finalTruth[0]}</p>
-                  {pre ? (
-                    <p className="mt-8 max-w-2xl text-xl leading-9 text-[#C2BFBA] sm:text-2xl">{pre}</p>
-                  ) : null}
-                  <div className="mt-4 text-[2.4rem] leading-[1.02] sm:text-[3.75rem] lg:text-[5.25rem]">
-                    <RansomText text={KERNEL} baseSize={1} scrollReveal />
+                  <div className="mt-8 max-w-2xl space-y-3">
+                    <p className="font-serif text-[1.65rem] font-semibold leading-[1.08] tracking-[-0.03em] text-[#F3EFEC] sm:text-3xl lg:text-4xl">
+                      {prefix}
+                    </p>
+                    <div className="py-1 text-[2rem] leading-none sm:text-[2.75rem] lg:text-[3.25rem]">
+                      <RansomText text={ACCENT} baseSize={1.15} scrollReveal />
+                    </div>
+                    <p className="font-serif text-[1.65rem] font-semibold leading-[1.08] tracking-[-0.03em] text-[#F3EFEC] sm:text-3xl lg:text-4xl">
+                      {suffix}
+                    </p>
                   </div>
                   {post ? (
-                    <p className="mt-5 max-w-2xl text-xl leading-9 text-[#C2BFBA] sm:text-2xl">{post}</p>
+                    <p className="mt-6 max-w-2xl text-xl leading-9 text-[#C2BFBA] sm:text-2xl">{post}</p>
                   ) : null}
                 </div>
               );
@@ -3250,7 +3295,7 @@ export function InitiationContinuityReframeSection({ content, inlineCta }) {
     <section
       ref={sectionRef}
       aria-labelledby="initiation-continuity-heading"
-      className="relative z-10 scroll-mt-24 overflow-hidden bg-transparent py-24 sm:py-28 lg:py-32"
+      className="relative z-10 scroll-mt-24 overflow-hidden bg-transparent py-12 sm:py-16 lg:py-32"
     >
       <SectionBleed top />
       <SectionGlitchOverlay accent="#DB2777" />
@@ -3587,7 +3632,7 @@ export function InitiationAICategorySection({ content }) {
     <section
       ref={sectionRef}
       aria-labelledby="initiation-ai-category-heading"
-      className="relative z-10 scroll-mt-24 overflow-hidden bg-transparent py-24 sm:py-28 lg:py-32"
+      className="relative z-10 hidden scroll-mt-24 overflow-hidden bg-transparent py-24 sm:py-28 lg:block lg:py-32"
     >
       <SectionBleed top={false} />
       <SectionGlitchOverlay accent={accent} />
@@ -3665,7 +3710,7 @@ export function InitiationAICategorySection({ content }) {
                     <span className="h-2.5 w-2.5 rounded-full bg-[#FEBC2E]" />
                     <span className="h-2.5 w-2.5 rounded-full bg-[#28C840]" />
                     <span className="ml-3 font-mono text-[11px] uppercase tracking-[0.24em] text-black/45">
-                      your tools — synced
+                      your tools, synced
                     </span>
                     <span className="ml-auto inline-flex items-center gap-2 rounded-full bg-[#28C840]/15 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-[#1c7a32]">
                       <span className="h-1.5 w-1.5 rounded-full bg-[#28C840]" />
@@ -3751,7 +3796,7 @@ export function InitiationAICategorySection({ content }) {
                   className="rounded-[1.75rem] border border-[#DB2777]/20 bg-[#08080d] p-7 shadow-[0_40px_120px_rgba(0,0,0,0.6)] sm:p-10"
                 >
                   <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-[#DB2777]/70">
-                    — laugh track cuts —
+                    laugh track cuts
                   </p>
                   <p className="mt-6 max-w-3xl font-serif text-2xl font-semibold leading-snug tracking-[-0.025em] text-[#F3EFEC] sm:text-3xl">
                     {reality}
@@ -3903,7 +3948,7 @@ export function InitiationStudioFlowsRevealSection({ content }) {
       aria-labelledby="initiation-studioflows-reveal-heading"
       className="relative z-10 scroll-mt-24 bg-black"
     >
-      <div ref={stageRef} className="relative z-10 h-[200vh]">
+      <div ref={stageRef} className="relative z-10 hidden h-[200vh] lg:block">
         <div className="sticky top-0 h-screen w-full overflow-hidden bg-black">
           <p className="absolute inset-x-0 top-[10vh] z-20 text-center font-mono text-[10px] uppercase tracking-[0.28em] text-[#D4A853]/70 sm:top-[11vh] sm:text-xs sm:tracking-[0.3em]">
             06 / studioflows os
@@ -3997,7 +4042,7 @@ export function InitiationStudioFlowsRevealSection({ content }) {
         </div>
       </div>
 
-      <div className="relative z-10 -mt-[clamp(5rem,12vh,9rem)] bg-black pb-24 pt-2 text-center sm:pt-4 lg:pb-32">
+      <div className="relative z-10 -mt-0 bg-black pb-12 pt-12 text-center sm:pt-8 lg:-mt-[clamp(5rem,12vh,9rem)] lg:pb-24 lg:pt-2">
         <div
           className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black via-black/95 to-transparent"
           aria-hidden="true"
@@ -4152,7 +4197,7 @@ export function InitiationFridayReportSection({ content }) {
     <section
       ref={sectionRef}
       aria-labelledby="initiation-friday-report-heading"
-      className="relative z-10 scroll-mt-24 overflow-hidden bg-[#0A0B12] py-24 sm:py-28 lg:py-32"
+      className="relative z-10 hidden scroll-mt-24 overflow-hidden bg-[#0A0B12] py-24 sm:py-28 lg:block lg:py-32"
     >
       <SectionBleed />
       <SectionGlitchOverlay accent={accent} variant="roll" />
@@ -4211,7 +4256,7 @@ export function InitiationFridayReportSection({ content }) {
                 />
                 {isSystem ? "studioflows" : "field crew"} · {fridayTimecode(progress)}
               </span>
-              <span className="text-[#9B9894]/70">job — 08:00 tomorrow</span>
+              <span className="text-[#9B9894]/70">job · 08:00 tomorrow</span>
             </div>
 
             {/* scene */}
@@ -4665,7 +4710,7 @@ function ProductLightbox({ state, onClose, onNavigate }) {
           transition={{ duration: 0.2 }}
           role="dialog"
           aria-modal="true"
-          aria-label={item?.label ? `${item.label} — enlarged` : "Enlarged screenshot"}
+          aria-label={item?.label ? `${item.label}, enlarged` : "Enlarged screenshot"}
           onClick={onClose}
         >
           <div
@@ -4705,7 +4750,7 @@ function ProductLightbox({ state, onClose, onNavigate }) {
                 {item ? (
                   <Image
                     src={item.src}
-                    alt={item.label ? `StudioFlows — ${item.label}` : "StudioFlows screenshot"}
+                    alt={item.label ? `StudioFlows, ${item.label}` : "StudioFlows screenshot"}
                     fill
                     sizes="100vw"
                     className="object-contain"
@@ -4866,7 +4911,7 @@ export function InitiationWhatYouGetSection({ content }) {
                   <div className="relative aspect-[16/9] w-full cursor-zoom-in overflow-hidden bg-[#0b0b12]">
                     <Image
                       src={shot.src}
-                      alt={`StudioFlows OS — ${shot.label}`}
+                      alt={`StudioFlows OS, ${shot.label}`}
                       fill
                       sizes="(min-width: 640px) 50vw, 100vw"
                       className="object-cover object-top transition-transform duration-500 ease-out group-hover/zoom:scale-[1.04]"
@@ -4908,7 +4953,7 @@ export function InitiationWhatYouGetSection({ content }) {
                       <div className="relative aspect-[9/18] w-full cursor-zoom-in overflow-hidden rounded-[0.9rem] bg-[#0b0b12] sm:rounded-[1.25rem]">
                         <Image
                           src={shot.src}
-                          alt={`StudioFlows booking — ${shot.label}`}
+                          alt={`StudioFlows booking, ${shot.label}`}
                           fill
                           sizes="(min-width: 640px) 30vw, 33vw"
                           className="object-cover object-top transition-transform duration-500 ease-out group-hover/zoom:scale-[1.05]"
@@ -5117,13 +5162,16 @@ export function InitiationFoundingProgramSection({ content }) {
                 →
               </span>
             </Link>
-            <Link
+            <BookCallLink
               href={content.secondaryCtaTarget}
               className="inline-flex min-h-[52px] items-center justify-center rounded-full border border-white/20 px-8 py-3.5 text-sm font-semibold text-[#E8E6E3] transition hover:border-white/40 hover:bg-white/[0.04]"
             >
               {content.secondaryCta}
-            </Link>
+            </BookCallLink>
           </div>
+          {content.funnelHelperCopy ? (
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-[#9B9894]">{content.funnelHelperCopy}</p>
+          ) : null}
         </div>
       </RevealSection>
     </section>
@@ -5236,6 +5284,43 @@ export function InitiationServiceLoopsSection({ content }) {
         </div>
       </RevealSection>
     </section>
+  );
+}
+
+// Mobile-only sticky primary CTA after the hero leaves the viewport.
+export function MobileStickyPrimaryCta({ href, label }) {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const hero = document.getElementById("initiation-hero-heading")?.closest("section");
+    if (!hero) return undefined;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setVisible(!entry.isIntersecting);
+      },
+      { threshold: 0, rootMargin: "0px 0px -12% 0px" },
+    );
+
+    observer.observe(hero);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      className={`fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[#030304]/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-md transition-transform duration-300 lg:hidden ${
+        visible ? "translate-y-0" : "pointer-events-none translate-y-full"
+      }`}
+      aria-hidden={!visible}
+    >
+      <Link
+        href={href}
+        tabIndex={visible ? 0 : -1}
+        className="inline-flex min-h-[48px] w-full items-center justify-center rounded-full bg-[#E8E6E3] px-7 py-3 text-sm font-semibold text-[#030304] shadow-[0_8px_28px_rgba(232,230,227,0.16)] transition hover:bg-white"
+      >
+        {label}
+      </Link>
+    </div>
   );
 }
 
@@ -5917,7 +6002,7 @@ export function SystemResetTransition() {
 
   const lines = [
     { at: 1, text: "root@studioflows:~# checking what depends on you...", tone: "muted" },
-    { at: 1, text: "[ alert ] found it — the business waits on one person", tone: "alert" },
+    { at: 1, text: "[ alert ] found it: the business waits on one person", tone: "alert" },
     { at: 2, text: "root@studioflows:~# taking the weight off the owner", tone: "bright" },
     { at: 2, text: "you no longer have to hold it all up", tone: "muted" },
     { at: 3, text: "root@studioflows:~# turning on the system", tone: "bright" },
@@ -6131,6 +6216,9 @@ export function InitiationOperationalDiagnosticSection({ content }) {
               </span>
           </Link>
           </div>
+          {content.funnelHelperCopy ? (
+            <p className="mx-auto mt-6 max-w-2xl text-sm leading-7 text-[#6B6557]">{content.funnelHelperCopy}</p>
+          ) : null}
         </div>
       </RevealSection>
     </section>
@@ -6375,13 +6463,16 @@ export function InitiationFinalCtaSection({ content }) {
                   </span>
             </Link>
               </div>
-              <Link
+              <BookCallLink
                 href={content.secondaryCtaTarget}
                 className="inline-flex min-h-[54px] items-center justify-center rounded-full border border-black/20 bg-transparent px-9 py-4 text-sm font-semibold text-[#0B0B0C] transition hover:bg-black/5"
               >
               {content.secondaryCta}
-            </Link>
+            </BookCallLink>
           </div>
+          {content.funnelHelperCopy ? (
+            <p className="mt-6 max-w-2xl text-sm leading-7 text-[#6B6557]">{content.funnelHelperCopy}</p>
+          ) : null}
           </motion.div>
           <footer className="mt-12 border-t border-black/10 pt-8 text-sm text-[#6B6557]">StudioFlows</footer>
         </div>
@@ -6582,7 +6673,7 @@ export function PainProductBand({ band, index }) {
               {reduce ? (
                 <Image
                   src={band.image}
-                  alt={`StudioFlows OS — ${band.headline}`}
+                  alt={`StudioFlows OS, ${band.headline}`}
                   fill
                   sizes={phone ? "300px" : "(min-width: 1024px) 50vw, 100vw"}
                   className="object-cover object-top"
@@ -6600,7 +6691,7 @@ export function PainProductBand({ band, index }) {
                     >
                       <Image
                         src={band.image}
-                        alt={`StudioFlows OS — ${band.headline}`}
+                        alt={`StudioFlows OS, ${band.headline}`}
                         fill
                         sizes={phone ? "300px" : "(min-width: 1024px) 50vw, 100vw"}
                         className="object-cover object-top transition-transform duration-500 ease-out group-hover:scale-[1.03]"

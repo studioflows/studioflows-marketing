@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
-const ALLOWED_COUNTRIES = new Set(["US"]);
+const ALLOWED_COUNTRIES = new Set(["US", "CO"]);
+const GEO_BLOCKED_REDIRECT_PATH = "/qualifier/us-only";
 
 export function middleware(request) {
   const hostname = request.nextUrl.hostname;
@@ -16,7 +17,9 @@ export function middleware(request) {
   }
 
   if (country && !ALLOWED_COUNTRIES.has(country)) {
-    return NextResponse.redirect(new URL("/", request.url));
+    const redirectUrl = new URL(GEO_BLOCKED_REDIRECT_PATH, request.url);
+    redirectUrl.search = request.nextUrl.search;
+    return NextResponse.redirect(redirectUrl);
   }
 
   return NextResponse.next();

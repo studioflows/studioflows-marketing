@@ -1,4 +1,8 @@
+import { VESSA_FRAMEWORK } from "@/lib/vessa-framework-content";
+
 export const metadata = {
+  title: VESSA_FRAMEWORK.meta.title,
+  description: VESSA_FRAMEWORK.meta.description,
   icons: {
     icon: "/Vessa%20favicon%20(200%20x%20200%20px).svg",
     shortcut: "/Vessa%20favicon%20(200%20x%20200%20px).svg",

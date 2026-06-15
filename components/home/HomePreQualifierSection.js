@@ -14,21 +14,27 @@ import {
   Q_OPTION_IDLE,
 } from "@/components/qualifier/qualifier-theme";
 import { SECTION_REVEAL } from "@/components/home/section-reveal";
+import { BookQuickCallButton } from "@/components/home/BookQuickCallButton";
 import { buildOpsHubUrl, getPreQualBand } from "@/lib/lead-attribution";
-import { HOMEPAGE_CTA, PRE_QUALIFIER, QUIZ_QUESTIONS } from "@/lib/homepage-content";
+import {
+  HOMEPAGE_CTA,
+  OPS_CHECK_LOW_FIT_COPY,
+  PRE_QUALIFIER,
+  QUIZ_QUESTIONS,
+} from "@/lib/homepage-content";
 
 function getAssessment(score) {
   if (score >= 13) {
     return {
       title: "High Operational Drag",
-      body: "You likely have margin leakage and founder bottlenecking in your core execution flow.",
+      body: `${score}/18. Some things are structured but handoffs and exceptions still end up back on your plate.`,
       qualified: true,
     };
   }
   if (score >= 8) {
     return {
       title: "Moderate Operational Drag",
-      body: "You have partial structure, but handoffs and ownership still leak execution.",
+      body: `${score}/18. Some things are structured but handoffs and exceptions still end up back on your plate.`,
       qualified: true,
     };
   }
@@ -36,6 +42,18 @@ function getAssessment(score) {
     title: "Low to Moderate Drag",
     body: "You may not need a full audit slot yet. We recommend waitlist and follow-up first.",
     qualified: false,
+  };
+}
+
+function getLowFitResult(score) {
+  const band =
+    OPS_CHECK_LOW_FIT_COPY.byScoreBand.find((entry) => score <= entry.maxScore) ??
+    OPS_CHECK_LOW_FIT_COPY.byScoreBand[OPS_CHECK_LOW_FIT_COPY.byScoreBand.length - 1];
+
+  return {
+    title: band.title,
+    body: band.body,
+    guidance: band.guidance,
   };
 }
 
@@ -63,6 +81,7 @@ function DiagnosisQuiz() {
         pqBand: getPreQualBand(score),
       })
     : null;
+  const lowFitResult = assessment.qualified ? null : getLowFitResult(score);
 
   if (isComplete) {
     return (
@@ -72,18 +91,41 @@ function DiagnosisQuiz() {
         transition={{ duration: 0.35, ease: "easeOut" }}
         className={`${Q_CARD} p-6 sm:p-8`}
       >
-        <p className={Q_EYEBROW}>Pre-Qualifier Complete</p>
-        <h3 className={`mt-3 text-2xl sm:text-3xl ${Q_HEADLINE}`}>{assessment.title}</h3>
-        <p className={`mt-3 text-sm leading-7 ${Q_BODY}`}>{assessment.body}</p>
+        <p className={Q_EYEBROW}>
+          {assessment.qualified ? "Pre-Qualifier Complete" : OPS_CHECK_LOW_FIT_COPY.eyebrow}
+        </p>
+        <h3 className={`mt-3 text-2xl sm:text-3xl ${Q_HEADLINE}`}>
+          {assessment.qualified ? assessment.title : lowFitResult.title}
+        </h3>
+        <p className={`mt-3 text-sm leading-7 ${Q_BODY}`}>
+          {assessment.qualified ? assessment.body : lowFitResult.body}
+        </p>
         <p className="mt-2 text-sm text-[#4E483D]">Ops Drag Snapshot: {score} / 18</p>
+        {assessment.qualified ? (
+          <p className={`mt-3 text-sm leading-7 ${Q_BODY}`}>{HOMEPAGE_CTA.qualifiedChoiceHelperCopy}</p>
+        ) : (
+          <>
+            <p className={`mt-3 text-sm leading-7 ${Q_BODY}`}>{lowFitResult.guidance}</p>
+            <p className={`mt-3 text-sm leading-7 ${Q_BODY}`}>{OPS_CHECK_LOW_FIT_COPY.helper}</p>
+          </>
+        )}
 
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
           {assessment.qualified ? (
-            <Link href={opsHubHandoffUrl} className={Q_CTA_PRIMARY}>
-              {HOMEPAGE_CTA.auditLabel}
-            </Link>
+            <>
+              <BookQuickCallButton
+                className={Q_CTA_PRIMARY}
+                label={HOMEPAGE_CTA.bookAuditLabel}
+                pqScore={score}
+                pqBand={getPreQualBand(score)}
+                opsCheckAnswers={answers.map((item) => item.label)}
+              />
+              <Link href={opsHubHandoffUrl} className={Q_CTA_SECONDARY}>
+                {HOMEPAGE_CTA.auditLabel}
+              </Link>
+            </>
           ) : (
-            <Link href={HOMEPAGE_CTA.vessaWaitlistHref} className={Q_CTA_PRIMARY}>
+            <Link href={HOMEPAGE_CTA.vessaWaitlistHref} className={Q_CTA_SECONDARY}>
               {HOMEPAGE_CTA.vessaWaitlistLabel}
             </Link>
           )}
@@ -93,7 +135,7 @@ function DiagnosisQuiz() {
               setQuestionIndex(0);
               setAnswers([]);
             }}
-            className={Q_CTA_SECONDARY}
+            className={assessment.qualified ? Q_CTA_SECONDARY : Q_CTA_PRIMARY}
           >
             Retake Pre-Qualifier
           </button>

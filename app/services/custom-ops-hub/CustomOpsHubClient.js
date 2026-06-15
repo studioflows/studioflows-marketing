@@ -6,6 +6,7 @@ import {
   loadLeadAttribution,
   mergeLeadAttribution,
   parseLeadAttribution,
+  resolveQualifiedOpsAuditRedirect,
   toIngestAttribution,
 } from "../../../lib/lead-attribution";
 import { evaluateQualification } from "../../../lib/qualify-custom-ops-hub";
@@ -184,16 +185,16 @@ const QUIZ_SECTIONS = [
   },
   {
     id: "budget-approval",
-    title: "Founder pricing and who can say yes",
+    title: "Platform access pricing and who can say yes",
     challenger:
-      "Founding members get StudioFlows at the launch rate, locked for life. Just confirm it works and who signs off so we route you to onboarding, not a sales cycle.",
+      "Founding members get platform access at the launch rate, locked for life. Confirm it works and who signs off so we route you to onboarding, not a sales cycle.",
     fields: [
       {
         name: "budgetRange",
-        sectionTitle: "Founding-member pricing",
+        sectionTitle: "Platform access pricing",
         challenger:
-          "$99 your first month, then $199/month — 5 seats included, additional seats $15/mo per user. Your founder rate is locked for life as an early member. New features and products are priced separately.",
-        label: "Does founding-member pricing work for your team?",
+          "To gain platform access, the following pricing applies: $99 your first month, then $199/month — 5 seats included, additional seats $15/mo per user. Your founder rate is locked for life as an early member. Custom build work and separate products are priced on their own.",
+        label: "Are you comfortable with this platform access pricing?",
         type: "single",
         autoAdvance: true,
         required: true,
@@ -279,12 +280,12 @@ const FAQ_ITEMS = [
   {
     question: "What does pricing look like?",
     answer:
-      "Founding-member pricing is $99 your first month, then $199/month — 5 seats included, with additional seats at $15/mo per user. That founder rate is locked for life as an early member. New features and products are priced separately.",
+      "Platform access is $99 your first month, then $199/month — 5 seats included, with additional seats at $15/mo per user. That founder rate is locked for life as an early member. Custom build work and separate products are priced on their own.",
   },
   {
     question: "What happens after I submit?",
     answer:
-      "If qualified, you move directly to booking. If timing is off, we still keep your details and can re-engage when the window is right.",
+      "We turn your answers into a clear Ops Teardown you can keep. If you are a fit, you can book a quick call next.",
   },
 ];
 
@@ -386,7 +387,7 @@ export default function CustomOpsHubClient() {
   const [attribution, setAttribution] = useState(parseAttributionFromWindow);
   const preQualBanner =
     attribution.pq_score != null
-      ? `Homepage pre-qual snapshot: ${attribution.pq_score}/18${attribution.pq_band ? ` (${attribution.pq_band} drag)` : ""}. Full qualifier below sets fit.`
+      ? `Your Ops Check hit ${attribution.pq_score}/18. This picks up where that left off.`
       : null;
   const [outreachNextSteps, setOutreachNextSteps] = useState([]);
   const [marketingBucket, setMarketingBucket] = useState(null);
@@ -419,8 +420,7 @@ export default function CustomOpsHubClient() {
 
   useEffect(() => {
     const workEmail = answers.workEmail;
-    const companyWebsite = answers.companyWebsite;
-    if (hasEditedCompanyWebsite || !workEmail || companyWebsite) {
+    if (hasEditedCompanyWebsite || !workEmail) {
       return;
     }
 
@@ -433,11 +433,17 @@ export default function CustomOpsHubClient() {
       return;
     }
 
-    setAnswers((prev) => ({
-      ...prev,
-      companyWebsite: `https://${domain}`,
-    }));
-  }, [answers.workEmail, answers.companyWebsite, hasEditedCompanyWebsite]);
+    const nextWebsite = `https://${domain}`;
+    setAnswers((prev) => {
+      if (prev.companyWebsite === nextWebsite) {
+        return prev;
+      }
+      return {
+        ...prev,
+        companyWebsite: nextWebsite,
+      };
+    });
+  }, [answers.workEmail, hasEditedCompanyWebsite]);
 
   const attachAndFocusTextInput = useCallback((node) => {
     activeTextInputRef.current = node;
@@ -587,8 +593,15 @@ export default function CustomOpsHubClient() {
         return;
       }
 
-      if (result.qualified && result.redirect_url) {
-        window.location.assign(result.redirect_url);
+      if (result.qualified) {
+        const opsAuditBookUrl = resolveQualifiedOpsAuditRedirect(result, attribution);
+        if (opsAuditBookUrl) {
+          window.location.assign(opsAuditBookUrl);
+          return;
+        }
+
+        setSubmitState("error");
+        setSubmitMessage("Unable to continue to booking right now. Please try again.");
         return;
       }
 
@@ -677,7 +690,7 @@ export default function CustomOpsHubClient() {
               : field.name === "companyName"
                 ? "organization"
                 : field.name === "companyWebsite"
-                  ? "url"
+                  ? "off"
                   : "off"
         }
         value={value}
@@ -764,20 +777,21 @@ export default function CustomOpsHubClient() {
         )}
 
         <section className="py-10 text-center sm:py-14">
-          <p className={Q_EYEBROW}>the path opens</p>
+          <p className={Q_EYEBROW}>ops teardown</p>
           <h1 className={`mx-auto mt-6 max-w-[900px] text-balance text-[2.2rem] sm:text-[3rem] lg:text-[4.4rem] ${Q_HEADLINE}`}>
-            OPS Drag Audit Qualifier
-            <br />
-            <span className="text-[#5A5346]">for teams ready to stop execution drag</span>
+            Let&apos;s build your Ops Teardown
           </h1>
           <p className={`mx-auto mt-6 max-w-[780px] text-balance sm:text-[17px] ${Q_BODY}`}>
-            Answer a few focused questions in about 90 seconds so we can understand your priorities, urgency, and fit
-            for a custom StudioFlows build.
+            Tell us how work actually moves day to day and we&apos;ll give you back a specific breakdown of where the drag is
+            showing up. Most people finish in about 2 minutes.
           </p>
         </section>
 
         <section className={`p-6 sm:p-8 ${Q_CARD}`}>
-          <div className="sticky top-2 z-20 -mx-2 rounded-xl border border-black/12 bg-[#FBF9F4]/96 px-3 py-2.5 backdrop-blur">
+          <p className={`text-sm leading-7 ${Q_BODY}`}>
+            We start with how things really happen so the teardown lines up with your actual operation.
+          </p>
+          <div className="sticky top-2 z-20 -mx-2 mt-5 rounded-xl border border-black/12 bg-[#FBF9F4]/96 px-3 py-2.5 backdrop-blur">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className={Q_EYEBROW}>
                 Question {questionIndex + 1} of {totalQuestions}
@@ -885,7 +899,11 @@ export default function CustomOpsHubClient() {
                 }
                 className={Q_CTA_PRIMARY}
               >
-                {questionIndex === totalQuestions - 1 ? (isSubmitting ? "Submitting..." : "Qualify and Continue") : "Continue"}
+                {questionIndex === totalQuestions - 1
+                  ? isSubmitting
+                    ? "Submitting..."
+                    : "Submit answers & book a quick call"
+                  : "Continue"}
               </button>
             )}
           </div>
