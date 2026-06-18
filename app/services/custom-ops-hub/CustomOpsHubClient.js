@@ -619,7 +619,11 @@ export default function CustomOpsHubClient() {
       }
 
       if (result.qualified) {
-        const opsAuditBookUrl = resolveQualifiedOpsAuditRedirect(result, attribution);
+        const opsAuditBookUrl = resolveQualifiedOpsAuditRedirect(
+          result,
+          attribution,
+          answers.workEmail
+        );
         if (opsAuditBookUrl) {
           window.location.assign(opsAuditBookUrl);
           return;

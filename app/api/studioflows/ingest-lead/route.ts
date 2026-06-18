@@ -154,6 +154,8 @@ export async function POST(req: NextRequest) {
             qualification_version: "v1",
             recommended_tier: tier,
             supabase_lead_id: supabaseLeadId,
+            full_qualifier_complete: true,
+            full_qualifier_payload: raw,
             ...attribution,
             ...(preQual ? { pre_qual: preQual } : {}),
           },
@@ -185,6 +187,7 @@ export async function POST(req: NextRequest) {
   const bookCallUrl = resolveBookCallUrl({
     ingestBookCallUrl: typeof ingestBody.book_call_url === "string" ? ingestBody.book_call_url : null,
     leadId,
+    email,
     from: bookFrom,
   });
   const opsTeardownUrl = buildOpsTeardownThankYouUrl({
