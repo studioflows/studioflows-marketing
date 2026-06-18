@@ -14,7 +14,7 @@ import {
   Q_OPTION_IDLE,
 } from "@/components/qualifier/qualifier-theme";
 import { SECTION_REVEAL } from "@/components/home/section-reveal";
-import { buildOpsHubUrl, getPreQualBand } from "@/lib/lead-attribution";
+import { buildOpsHubUrl, buildPreQualAnswerPayload, getPreQualBand } from "@/lib/lead-attribution";
 import { HOMEPAGE_CTA, PRE_QUALIFIER, QUIZ_QUESTIONS } from "@/lib/homepage-content";
 
 function getAssessment(score) {
@@ -56,12 +56,23 @@ function DiagnosisQuiz() {
   };
 
   const opsHubHandoffUrl = assessment.qualified
-    ? buildOpsHubUrl({
-        source: "homepage-diagnosis",
-        pqScore: score,
-        pqQualified: assessment.qualified,
-        pqBand: getPreQualBand(score),
-      })
+    ? (() => {
+        const preQualSession = buildPreQualAnswerPayload(
+          QUIZ_QUESTIONS,
+          answers,
+          score,
+          getPreQualBand(score),
+          assessment.qualified
+        );
+        return buildOpsHubUrl({
+          source: "homepage-diagnosis",
+          pqSessionId: preQualSession.session_id,
+          pqScore: score,
+          pqQualified: assessment.qualified,
+          pqBand: getPreQualBand(score),
+          preQualSession,
+        });
+      })()
     : null;
 
   if (isComplete) {
