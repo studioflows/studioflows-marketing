@@ -31,10 +31,7 @@ function readSearchParam(search, key) {
 export default function OpsTeardownThankYouClient({ initialSearch = "" }) {
   const leadId = useMemo(() => readSearchParam(initialSearch, "lead_id"), [initialSearch]);
   const email = useMemo(() => readSearchParam(initialSearch, "email"), [initialSearch]);
-  const from = useMemo(
-    () => readSearchParam(initialSearch, "from") ?? "homepage-ops-check-qualified",
-    [initialSearch]
-  );
+  const from = useMemo(() => readSearchParam(initialSearch, "from") ?? "custom-ops-hub", [initialSearch]);
 
   const [sheet, setSheet] = useState(null);
   const [sheetState, setSheetState] = useState("idle");
@@ -144,17 +141,17 @@ export default function OpsTeardownThankYouClient({ initialSearch = "" }) {
   return (
     <main className={QUALIFIER_PAGE}>
       <QualifierAtmosphere />
-      <div className="relative z-10 mx-auto w-full max-w-3xl px-4 py-10 sm:py-14">
-        <div className={`${Q_CARD} p-6 sm:p-8`}>
-          <p className={Q_EYEBROW}>Ops Teardown</p>
-          <h1 className={`mt-3 text-2xl sm:text-3xl ${Q_HEADLINE}`}>
+      <div className="relative z-10 mx-auto flex w-full max-w-4xl flex-col px-4 py-8 sm:py-10">
+        <header className={`${Q_CARD} p-5 sm:p-6`}>
+          <p className={Q_EYEBROW}>Thank you</p>
+          <h1 className={`mt-2 text-2xl sm:text-3xl ${Q_HEADLINE}`}>
             {sheet?.company_name
               ? `${sheet.company_name} — Ops Teardown`
               : "Your Ops Teardown is ready."}
           </h1>
-          <p className={`mt-3 text-sm leading-7 ${Q_BODY}`}>
-            Built from your homepage pre-qualifier and full qualifier answers. Download the watermarked PDF,
-            email it to yourself, or share the link with a stakeholder.
+          <p className={`mt-3 max-w-2xl text-sm leading-7 ${Q_BODY}`}>
+            Built from your pre-qualifier and full qualifier answers. Review your teardown below,
+            then book a full ops audit with the founder of StudioFlows when you are ready to go deeper.
           </p>
 
           {sheetState === "loading" ? (
@@ -169,10 +166,20 @@ export default function OpsTeardownThankYouClient({ initialSearch = "" }) {
             </p>
           ) : null}
 
+          {bookCallUrl ? (
+            <a href={bookCallUrl} className={`mt-5 inline-flex ${Q_CTA_PRIMARY}`}>
+              Book a Full Ops Audit with the Founder
+            </a>
+          ) : (
+            <Link href="/services/custom-ops-hub" className={`mt-5 inline-flex ${Q_CTA_SECONDARY}`}>
+              Return to Qualifier
+            </Link>
+          )}
+
           {sheetState === "ready" ? (
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               {pdfDownloadUrl ? (
-                <a href={pdfDownloadUrl} className={Q_CTA_PRIMARY}>
+                <a href={pdfDownloadUrl} className={Q_CTA_SECONDARY}>
                   Download PDF
                 </a>
               ) : null}
@@ -191,35 +198,24 @@ export default function OpsTeardownThankYouClient({ initialSearch = "" }) {
                   {copyState === "copied" ? "Link copied" : "Copy share link"}
                 </button>
               ) : null}
+              <a href={referralMailto} className={Q_CTA_SECONDARY}>
+                Know someone with ops drag?
+              </a>
             </div>
           ) : null}
 
           {emailMessage ? <p className="mt-3 text-sm text-[#4E483D]">{emailMessage}</p> : null}
-
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            {bookCallUrl ? (
-              <a href={bookCallUrl} className={Q_CTA_SECONDARY}>
-                Book Your Ops Audit
-              </a>
-            ) : (
-              <Link href="/services/custom-ops-hub" className={Q_CTA_SECONDARY}>
-                Return to Qualifier
-              </Link>
-            )}
-            <a href={referralMailto} className={Q_CTA_SECONDARY}>
-              Know someone with ops drag?
+          <p className="mt-3 text-xs leading-6 text-[#4E483D]">
+            Referral link:{" "}
+            <a href={referralUrl} className="underline underline-offset-2">
+              {referralUrl}
             </a>
-          </div>
-
-          <p className="mt-4 text-xs leading-6 text-[#4E483D]">
-            Referral link: <a href={referralUrl} className="underline underline-offset-2">{referralUrl}</a>
           </p>
-          <p className="mt-2 text-xs leading-6 text-[#4E483D]">
-            Calendar embed lands in Gate D on this same page.
-          </p>
-        </div>
+        </header>
 
-        {sheetState === "ready" && sheet ? <OpsTeardownSheetView sheet={sheet} /> : null}
+        {sheetState === "ready" && sheet ? (
+          <OpsTeardownSheetView sheet={sheet} viewport />
+        ) : null}
       </div>
     </main>
   );

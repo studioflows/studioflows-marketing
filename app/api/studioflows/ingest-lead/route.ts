@@ -11,7 +11,6 @@ import {
 } from "@/lib/qualify-custom-ops-hub";
 import {
   buildOpsAuditBookUrl,
-  buildOpsForkUrl,
   buildOpsTeardownThankYouUrl,
 } from "@/lib/ops-audit-handoff";
 import { createMarketingSupabaseServerClient } from "@/lib/supabase-server";
@@ -62,9 +61,7 @@ export async function POST(req: NextRequest) {
   const attribution = pickAttribution(body);
   const preQual = pickPreQual(body);
   const handoffFrom =
-    typeof body.from === "string" && body.from.trim()
-      ? body.from.trim()
-      : "homepage-ops-check-qualified";
+    typeof body.from === "string" && body.from.trim() ? body.from.trim() : "custom-ops-hub";
 
   if (!qualified) {
     const marketingBucket = getMarketingBucket({ score, reasons });
@@ -196,12 +193,6 @@ export async function POST(req: NextRequest) {
     from: handoffFrom,
     siteOrigin: process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.studioflows.co",
   });
-  const redirectUrl = buildOpsForkUrl({
-    leadId,
-    email,
-    from: "custom-ops-hub",
-  });
-
   return NextResponse.json({
     qualified: true,
     score,
@@ -209,7 +200,7 @@ export async function POST(req: NextRequest) {
     lead_id: leadId,
     book_call_url: bookCallUrl,
     ops_teardown_url: opsTeardownUrl,
-    redirect_url: redirectUrl,
+    redirect_url: bookCallUrl,
     recommended_tier: tier,
   });
 }

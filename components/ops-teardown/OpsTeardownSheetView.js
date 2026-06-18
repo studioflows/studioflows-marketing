@@ -5,12 +5,16 @@ import {
   Q_HEADLINE,
 } from "@/components/qualifier/qualifier-theme";
 
-export default function OpsTeardownSheetView({ sheet }) {
+export default function OpsTeardownSheetView({ sheet, viewport = false }) {
   if (!sheet) return null;
 
+  const shellClass = viewport
+    ? "mt-5 max-h-[min(72vh,920px)] overflow-y-auto rounded-2xl border border-black/12 bg-[#F4F1EA] shadow-[0_24px_60px_rgba(11,11,12,0.12)]"
+    : "mt-8 space-y-4";
+
   return (
-    <div className="mt-8 space-y-4">
-      <div className={`${Q_CARD} overflow-hidden`}>
+    <div className={shellClass}>
+      <div className={`${viewport ? "" : Q_CARD} overflow-hidden`}>
         <div className="border-b border-black/10 bg-[#0B0B0C] px-5 py-4 text-[#F4F1EA] sm:px-6">
           <p className={Q_EYEBROW}>StudioFlows Ops Teardown</p>
           <h2 className={`mt-2 text-xl sm:text-2xl ${Q_HEADLINE} text-[#F4F1EA]`}>{sheet.company_name}</h2>
@@ -42,9 +46,11 @@ export default function OpsTeardownSheetView({ sheet }) {
         </div>
       </div>
 
-      <p className="text-center font-mono text-[10px] uppercase tracking-[0.2em] text-[#6B5212]/80">
-        StudioFlows · Confidential Ops Teardown
-      </p>
+      {!viewport ? (
+        <p className="text-center font-mono text-[10px] uppercase tracking-[0.2em] text-[#6B5212]/80">
+          StudioFlows · Confidential Ops Teardown
+        </p>
+      ) : null}
     </div>
   );
 }

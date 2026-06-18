@@ -598,6 +598,7 @@ export default function CustomOpsHubClient() {
         body: JSON.stringify({
           consent: true,
           form_payload: answers,
+          from: "custom-ops-hub",
           ...attribution,
           ...(preQual ? { pre_qual: preQual } : {}),
         }),
@@ -611,8 +612,9 @@ export default function CustomOpsHubClient() {
         return;
       }
 
-      if (result.qualified && result.redirect_url) {
-        window.location.assign(result.redirect_url);
+      const thankYouUrl = result.redirect_url || result.book_call_url;
+      if (result.qualified && thankYouUrl) {
+        window.location.assign(thankYouUrl);
         return;
       }
 
